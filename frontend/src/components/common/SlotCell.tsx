@@ -3,6 +3,7 @@ import { SlotView } from '../../types/contract';
 import { StatusBadge } from './StatusBadge';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { CheckIcon } from './icons';
 
 export interface SlotCellProps {
   slot: SlotView;
@@ -37,14 +38,14 @@ export const SlotCell: React.FC<SlotCellProps> = ({
     switch (slot.status) {
       case 'AVAILABLE':
         return isSelected
-          ? 'border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-500 shadow-md'
-          : 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100/70 hover:border-emerald-400 cursor-pointer shadow-sm';
+          ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-500 shadow-md'
+          : 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100/70 hover:border-emerald-400 cursor-pointer shadow-xs active:scale-[0.98]';
       case 'HELD':
         return 'border-amber-300 bg-amber-50/40 opacity-80 cursor-not-allowed';
       case 'RESERVED':
         return 'border-blue-300 bg-blue-50/40 opacity-80 cursor-not-allowed';
       case 'OCCUPIED':
-        return 'border-slate-200 bg-slate-100 opacity-60 cursor-not-allowed';
+        return 'border-slate-300 bg-slate-100 pattern-diagonal-hatch opacity-75 cursor-not-allowed';
       default:
         return 'border-slate-200 bg-white';
     }
@@ -60,23 +61,25 @@ export const SlotCell: React.FC<SlotCellProps> = ({
       onKeyDown={handleKeyDown}
       className={twMerge(
         clsx(
-          'relative flex flex-col items-center justify-between p-3 rounded-xl border-2 transition-all select-none min-h-[96px]',
+          'relative flex flex-col items-center justify-between p-3 rounded-xl border-2 motion-safe:transition-all motion-safe:duration-150 motion-reduce:transition-none select-none min-h-[96px] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-600',
           getStatusStyles()
         )
       )}
     >
+      {/* Top Bay Indicator Line */}
       <div className="flex items-center justify-between w-full">
-        <span className="font-bold text-base text-slate-800 tracking-wide">
+        <span className="font-bold text-base text-slate-800 tracking-wide font-mono">
           {slot.slotNumber}
         </span>
         {isSelected && (
-          <span className="text-[10px] font-semibold uppercase bg-indigo-600 text-white px-1.5 py-0.5 rounded">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase bg-indigo-600 text-white px-2 py-0.5 rounded shadow-xs">
+            <CheckIcon className="w-3 h-3 stroke-[2.5]" />
             Selected
           </span>
         )}
       </div>
 
-      <div className="mt-2">
+      <div className="mt-2 w-full flex justify-center">
         <StatusBadge status={slot.status} size="sm" />
       </div>
     </div>
