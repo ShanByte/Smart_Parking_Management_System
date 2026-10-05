@@ -199,12 +199,31 @@ export const CreateBookingHeadersSchema = z.object({
   'idempotency-key': z.string().min(8).max(64),
 }).passthrough();
 
-export const CreateBookingRequestSchema = z.object({
-  slotId: z.string().min(1, 'slotId is required'),
-  startTime: z.string().datetime('startTime must be UTC ISO-8601 string'),
-  endTime: z.string().datetime('endTime must be UTC ISO-8601 string'),
-  vehicleNumber: z.string().regex(/^[A-Z0-9]{4,15}$/, 'vehicleNumber must be 4-15 uppercase alphanumeric characters').optional(),
-}).strict();
+export const CreateBookingRequestSchema = z
+  .object({
+    slotId: z.string().min(1, 'slotId is required'),
+    startTime: z.string().datetime('startTime must be UTC ISO-8601 string'),
+    endTime: z.string().datetime('endTime must be UTC ISO-8601 string'),
+    vehicleNumber: z
+      .string()
+      .regex(/^[A-Z0-9]{4,15}$/, 'vehicleNumber must be 4-15 uppercase alphanumeric characters')
+      .optional(),
+  })
+  .strict()
+  .refine(
+    (data) => {
+      const start = new Date(data.startTime).getTime();
+      const end = new Date(data.endTime).getTime();
+      const durationMs = end - start;
+      const minDurationMs = 15 * 60 * 1000;
+      const maxDurationMs = 24 * 60 * 60 * 1000;
+      return durationMs >= minDurationMs && durationMs <= maxDurationMs;
+    },
+    {
+      message: 'Booking duration must be between 15 minutes and 24 hours',
+      path: ['endTime'],
+    }
+  );
 
 export const CreateBookingResponseDataSchema = BookingViewSchema;
 export const GetMyBookingsResponseDataSchema = z.array(BookingViewSchema);
