@@ -1,241 +1,208 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { validate } from '../middleware/validate.js';
 import { sendSuccess } from '../lib/respond.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 import {
+  Role,
+  BookingStatus,
   CreateLotRequestSchema,
   UpdateLotRequestSchema,
   GenerateSlotsRequestSchema,
   AdminBookingsQuerySchema,
   UpdateUserRoleRequestSchema,
   CreateDeviceRequestSchema,
-  Role,
-  SlotStatus,
-  BookingStatus,
-  SlotSource,
-  ParkingLotView,
-  UserView,
-  DeviceView,
-  AuditLogView,
-  SlotView,
-  BookingView,
-  DeleteLotResponseData,
-  GenerateSlotsResponseData,
-  ReleaseSlotResponseData,
-  DeleteDeviceResponseData,
-  CreateDeviceResponseData,
 } from '@smart-parking/shared';
+import {
+  adminCreateLot,
+  adminUpdateLot,
+  adminDeleteLot,
+  adminGenerateSlots,
+  adminReleaseSlot,
+  adminGetBookings,
+  adminGetUsers,
+  adminUpdateUserRole,
+  adminCreateDevice,
+  adminGetDevices,
+  adminRevokeDevice,
+  adminGetAuditLogs,
+} from '../services/admin.service.js';
 
 export const adminRouter = Router();
 
-const mockLot: ParkingLotView = {
-  id: 'lot_stub_001',
-  name: 'FC Road Smart Parking',
-  address: 'Fergusson College Rd, Shivajinagar, Pune',
-  latitude: 18.5204,
-  longitude: 73.8567,
-  totalSlots: 50,
-  pricePerHourPaise: 4000,
-  isActive: true,
-};
-
-const mockUser: UserView = {
-  id: 'usr_stub_001',
-  name: 'Demo Admin',
-  email: 'admin@example.com',
-  role: Role.ADMIN,
-  assignedLotId: null,
-  createdAt: '2026-10-05T00:00:00.000Z',
-};
-
-const mockBooking: BookingView = {
-  id: 'bk_stub_001',
-  slotId: 'slot_stub_001',
-  status: BookingStatus.CONFIRMED,
-  startTime: '2026-10-05T12:00:00.000Z',
-  endTime: '2026-10-05T13:00:00.000Z',
-  amountPaise: 4000,
-  heldUntil: null,
-  bookingCode: 'ABC234',
-  vehicleNumber: 'MH12AB1234',
-  checkedInAt: null,
-};
-
-const mockDevice: DeviceView = {
-  id: 'dev_stub_001',
-  name: 'Gate Simulator',
-  kind: SlotSource.SIM,
-  parkingLotId: 'lot_stub_001',
-  isActive: true,
-  revokedAt: null,
-  createdAt: '2026-10-05T00:00:00.000Z',
-};
-
-const mockAuditLog: AuditLogView = {
-  id: 'aud_stub_001',
-  adminId: 'usr_stub_001',
-  action: 'CREATE_LOT',
-  targetType: 'ParkingLot',
-  targetId: 'lot_stub_001',
-  details: { name: 'FC Road Smart Parking' },
-  createdAt: '2026-10-05T00:00:00.000Z',
-};
+// Protect all admin routes per Contract C5, C7 & Security Rule 6
+adminRouter.use(requireAuth);
+adminRouter.use(requireRole(Role.ADMIN));
 
 // POST /api/v1/admin/lots
-// STUB: replace in Stage 5
 adminRouter.post(
   '/lots',
   validate({ body: CreateLotRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 5
-    const data: ParkingLotView = {
-      ...mockLot,
-      name: req.body.name,
-      address: req.body.address,
-      latitude: req.body.latitude,
-      longitude: req.body.longitude,
-      totalSlots: req.body.totalSlots,
-      pricePerHourPaise: req.body.pricePerHourPaise,
-    };
-    sendSuccess(res, data, 201);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await adminCreateLot(req.user!.userId, req.body);
+      sendSuccess(res, data, 201);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // PUT /api/v1/admin/lots/:id
-// STUB: replace in Stage 5
 adminRouter.put(
   '/lots/:id',
   validate({ body: UpdateLotRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 5
-    const data: ParkingLotView = {
-      ...mockLot,
-      id: req.params.id || mockLot.id,
-      ...req.body,
-    };
-    sendSuccess(res, data, 200);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? '');
+      const data = await adminUpdateLot(req.user!.userId, id, req.body);
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
-// DELETE /api/v1/admin/lots/:id
-// STUB: replace in Stage 5
-adminRouter.delete('/lots/:id', (req: Request, res: Response) => {
-  // STUB: replace in Stage 5
-  const lotId = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockLot.id);
-  const data: DeleteLotResponseData = {
-    deactivated: true,
-    lotId,
-  };
-  sendSuccess(res, data, 200);
-});
+// DELETE /api/v1/admin/lots/:id (deactivates)
+adminRouter.delete(
+  '/lots/:id',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? '');
+      const data = await adminDeleteLot(req.user!.userId, id);
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // POST /api/v1/admin/lots/:id/generate-slots
-// STUB: replace in Stage 5
 adminRouter.post(
   '/lots/:id/generate-slots',
   validate({ body: GenerateSlotsRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 5
-    const count = req.body.count;
-    const slots: SlotView[] = Array.from({ length: count }, (_, i) => ({
-      id: `slot_stub_${i + 1}`,
-      slotNumber: `A${i + 1}`,
-      status: SlotStatus.AVAILABLE,
-    }));
-    const data: GenerateSlotsResponseData = { count, slots };
-    sendSuccess(res, data, 201);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? '');
+      const data = await adminGenerateSlots(req.user!.userId, id, req.body.count);
+      sendSuccess(res, data, 201);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // PUT /api/v1/admin/slots/:id/release
-// STUB: replace in Stage 5
-adminRouter.put('/slots/:id/release', (req: Request, res: Response) => {
-  // STUB: replace in Stage 5
-  const slotId = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? 'slot_stub_001');
-  const data: ReleaseSlotResponseData = {
-    released: true,
-    slotId,
-  };
-  sendSuccess(res, data, 200);
-});
+adminRouter.put(
+  '/slots/:id/release',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? '');
+      const data = await adminReleaseSlot(req.user!.userId, id);
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
-// GET /api/v1/admin/bookings
-// STUB: replace in Stage 5
+// GET /api/v1/admin/bookings?status=
 adminRouter.get(
   '/bookings',
   validate({ query: AdminBookingsQuerySchema }),
-  (_req: Request, res: Response) => {
-    // STUB: replace in Stage 5
-    sendSuccess(res, [mockBooking], 200);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const status = req.query.status as BookingStatus | undefined;
+      const data = await adminGetBookings(status);
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // GET /api/v1/admin/users
-// STUB: replace in Stage 5
-adminRouter.get('/users', (_req: Request, res: Response) => {
-  // STUB: replace in Stage 5
-  sendSuccess(res, [mockUser], 200);
-});
+adminRouter.get(
+  '/users',
+  async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await adminGetUsers();
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // PUT /api/v1/admin/users/:id/role
-// STUB: replace in Stage 5
 adminRouter.put(
   '/users/:id/role',
   validate({ body: UpdateUserRoleRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 5
-    const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockUser.id);
-    const data: UserView = {
-      ...mockUser,
-      id,
-      role: req.body.role,
-      assignedLotId: req.body.assignedLotId ?? null,
-    };
-    sendSuccess(res, data, 200);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? '');
+      const data = await adminUpdateUserRole(
+        req.user!.userId,
+        id,
+        req.body.role,
+        req.body.assignedLotId
+      );
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/v1/admin/devices
+adminRouter.post(
+  '/devices',
+  validate({ body: CreateDeviceRequestSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await adminCreateDevice(req.user!.userId, req.body);
+      sendSuccess(res, data, 201);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // GET /api/v1/admin/devices
-// STUB: replace in Stage 5
-adminRouter.get('/devices', (_req: Request, res: Response) => {
-  // STUB: replace in Stage 5
-  sendSuccess(res, [mockDevice], 200);
-});
-
-// POST /api/v1/admin/devices
-// STUB: replace in Stage 5
-adminRouter.post(
+adminRouter.get(
   '/devices',
-  validate({ body: CreateDeviceRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 5
-    const data: CreateDeviceResponseData = {
-      device: {
-        ...mockDevice,
-        name: req.body.name,
-        kind: req.body.kind,
-        parkingLotId: req.body.parkingLotId ?? null,
-      },
-      rawKey: 'dev_raw_key_shown_once_sample',
-    };
-    sendSuccess(res, data, 201);
+  async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await adminGetDevices();
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
-// DELETE /api/v1/admin/devices/:id
-// STUB: replace in Stage 5
-adminRouter.delete('/devices/:id', (req: Request, res: Response) => {
-  // STUB: replace in Stage 5
-  const deviceId = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockDevice.id);
-  const data: DeleteDeviceResponseData = {
-    revoked: true,
-    deviceId,
-  };
-  sendSuccess(res, data, 200);
-});
+// DELETE /api/v1/admin/devices/:id (revokes)
+adminRouter.delete(
+  '/devices/:id',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? '');
+      const data = await adminRevokeDevice(req.user!.userId, id);
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // GET /api/v1/admin/audit-log
-// STUB: replace in Stage 5
-adminRouter.get('/audit-log', (_req: Request, res: Response) => {
-  // STUB: replace in Stage 5
-  sendSuccess(res, [mockAuditLog], 200);
-});
+adminRouter.get(
+  '/audit-log',
+  async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await adminGetAuditLogs();
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);

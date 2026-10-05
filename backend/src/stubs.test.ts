@@ -1,14 +1,18 @@
-import { describe, it, expect, vi } from 'vitest';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from './app.js';
 import { prisma } from './lib/prisma.js';
 import type { User, RefreshToken, ParkingLot, Booking } from '@prisma/client';
 import { hashPassword, signAccessToken, generateRefreshToken, hashToken } from './lib/crypto.js';
-import { Role, SlotStatus } from '@smart-parking/shared';
+import { Role, SlotStatus, SlotSource } from '@smart-parking/shared';
 import * as lotsService from './services/lots.service.js';
 import * as reservationsService from './services/reservations.service.js';
 import * as paymentsService from './services/payments.service.js';
 import * as statsService from './services/stats.service.js';
+import * as ingestionService from './services/ingestion.service.js';
+import * as guardService from './services/guard.service.js';
+import * as adminService from './services/admin.service.js';
 import {
   RegisterResponseDataSchema,
   LoginResponseDataSchema,
@@ -399,6 +403,19 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
 
   describe('Sensors Endpoints', () => {
     it('POST /api/v1/sensors/events matches SensorEventResponseDataSchema', async () => {
+      vi.spyOn(prisma.device, 'findUnique').mockResolvedValue({
+        id: 'dev_001',
+        name: 'Sensor 1',
+        kind: 'SENSOR',
+        parkingLotId: 'lot_001',
+        keyHash: hashToken('raw-device-key-test'),
+        isActive: true,
+        revokedAt: null,
+        createdAt: new Date(),
+      } as unknown as any);
+
+      vi.spyOn(ingestionService, 'ingestSensorEvent').mockResolvedValue({ applied: true });
+
       const res = await request(app)
         .post('/api/v1/sensors/events')
         .set('x-device-key', 'raw-device-key-test')
@@ -415,9 +432,30 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
   });
 
   describe('Admin Endpoints', () => {
+    const adminToken = signAccessToken({ sub: 'usr_admin', role: Role.ADMIN });
+
+    beforeEach(() => {
+      vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+        id: 'usr_admin',
+        role: Role.ADMIN,
+      } as unknown as any);
+    });
+
     it('POST /api/v1/admin/lots matches ParkingLotSchema', async () => {
+      vi.spyOn(adminService, 'adminCreateLot').mockResolvedValue({
+        id: 'lot_001',
+        name: 'Pune Station Parking',
+        address: 'Station Rd, Pune',
+        latitude: 18.5284,
+        longitude: 73.8743,
+        totalSlots: 100,
+        pricePerHourPaise: 5000,
+        isActive: true,
+      });
+
       const res = await request(app)
         .post('/api/v1/admin/lots')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({
           name: 'Pune Station Parking',
           address: 'Station Rd, Pune',
@@ -433,7 +471,14 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('DELETE /api/v1/admin/lots/:id matches DeleteLotResponseDataSchema', async () => {
-      const res = await request(app).delete('/api/v1/admin/lots/lot_001');
+      vi.spyOn(adminService, 'adminDeleteLot').mockResolvedValue({
+        deactivated: true,
+        lotId: 'lot_001',
+      });
+
+      const res = await request(app)
+        .delete('/api/v1/admin/lots/lot_001')
+        .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       const parsed = DeleteLotResponseDataSchema.safeParse(res.body.data);
@@ -441,8 +486,17 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('POST /api/v1/admin/lots/:id/generate-slots matches GenerateSlotsResponseDataSchema', async () => {
+      vi.spyOn(adminService, 'adminGenerateSlots').mockResolvedValue({
+        count: 5,
+        slots: [
+          { id: 'slot_1', slotNumber: 'A1', status: SlotStatus.AVAILABLE },
+          { id: 'slot_2', slotNumber: 'A2', status: SlotStatus.AVAILABLE },
+        ],
+      });
+
       const res = await request(app)
         .post('/api/v1/admin/lots/lot_001/generate-slots')
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ count: 5 });
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
@@ -451,7 +505,14 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('PUT /api/v1/admin/slots/:id/release matches ReleaseSlotResponseDataSchema', async () => {
-      const res = await request(app).put('/api/v1/admin/slots/slot_001/release');
+      vi.spyOn(adminService, 'adminReleaseSlot').mockResolvedValue({
+        released: true,
+        slotId: 'slot_001',
+      });
+
+      const res = await request(app)
+        .put('/api/v1/admin/slots/slot_001/release')
+        .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       const parsed = ReleaseSlotResponseDataSchema.safeParse(res.body.data);
@@ -459,7 +520,21 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('GET /api/v1/admin/audit-log matches AdminAuditLogResponseDataSchema', async () => {
-      const res = await request(app).get('/api/v1/admin/audit-log');
+      vi.spyOn(adminService, 'adminGetAuditLogs').mockResolvedValue([
+        {
+          id: 'aud_001',
+          adminId: 'usr_admin',
+          action: 'CREATE_LOT',
+          targetType: 'ParkingLot',
+          targetId: 'lot_001',
+          details: {},
+          createdAt: '2026-10-05T12:00:00.000Z',
+        },
+      ]);
+
+      const res = await request(app)
+        .get('/api/v1/admin/audit-log')
+        .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       const parsed = AdminAuditLogResponseDataSchema.safeParse(res.body.data);
@@ -468,8 +543,33 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
   });
 
   describe('Guard Endpoints', () => {
+    const guardToken = signAccessToken({ sub: 'usr_guard', role: Role.GUARD });
+
+    beforeEach(() => {
+      vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+        id: 'usr_guard',
+        role: Role.GUARD,
+        assignedLotId: 'lot_001',
+      } as unknown as any);
+    });
+
     it('GET /api/v1/guard/lots/:lotId/board matches GuardBoardResponseDataSchema', async () => {
-      const res = await request(app).get('/api/v1/guard/lots/lot_001/board');
+      vi.spyOn(guardService, 'getGuardBoard').mockResolvedValue({
+        lot: { id: 'lot_001', name: 'FC Road Lot', totalSlots: 20 },
+        slots: [
+          {
+            slotId: 'slot_001',
+            slotNumber: 'A1',
+            status: SlotStatus.AVAILABLE,
+            source: SlotSource.APP,
+            booking: null,
+          },
+        ],
+      });
+
+      const res = await request(app)
+        .get('/api/v1/guard/lots/lot_001/board')
+        .set('Authorization', `Bearer ${guardToken}`);
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       const parsed = GuardBoardResponseDataSchema.safeParse(res.body.data);
@@ -477,8 +577,22 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('POST /api/v1/guard/check-in matches GuardCheckInResponseDataSchema', async () => {
+      vi.spyOn(guardService, 'checkInBooking').mockResolvedValue({
+        id: 'bk_001',
+        slotId: 'slot_001',
+        status: 'CONFIRMED',
+        startTime: new Date('2026-10-05T12:00:00.000Z'),
+        endTime: new Date('2026-10-05T13:00:00.000Z'),
+        amountPaise: 4000,
+        heldUntil: null,
+        bookingCode: 'ABC234',
+        vehicleNumber: 'MH12AB1234',
+        checkedInAt: new Date('2026-10-05T12:05:00.000Z'),
+      } as unknown as any);
+
       const res = await request(app)
         .post('/api/v1/guard/check-in')
+        .set('Authorization', `Bearer ${guardToken}`)
         .send({ bookingCode: 'ABC234' });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -487,8 +601,15 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('POST /api/v1/guard/slots/:slotId/walk-in matches GuardWalkInResponseDataSchema', async () => {
+      vi.spyOn(guardService, 'guardSetSlotStatus').mockResolvedValue({
+        slotId: 'slot_001',
+        status: SlotStatus.OCCUPIED,
+        source: SlotSource.GUARD,
+      });
+
       const res = await request(app)
         .post('/api/v1/guard/slots/slot_001/walk-in')
+        .set('Authorization', `Bearer ${guardToken}`)
         .send({ status: 'OCCUPIED' });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);

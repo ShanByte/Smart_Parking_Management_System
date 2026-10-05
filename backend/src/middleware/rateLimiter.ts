@@ -27,3 +27,30 @@ export const paymentsRateLimiter = rateLimit({
     code: ErrorCode.RATE_LIMITED,
   },
 });
+
+export const sensorsRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // 120 requests per minute per device
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
+  keyGenerator: (req) => (req.headers['x-device-key'] as string) || req.ip || 'unknown',
+  message: {
+    success: false,
+    message: 'Too many sensor events from this device. Please rate limit.',
+    code: ErrorCode.RATE_LIMITED,
+  },
+});
+
+export const guardCheckInRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 check-in attempts per minute to prevent code guessing
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
+  message: {
+    success: false,
+    message: 'Too many check-in attempts. Please try again shortly.',
+    code: ErrorCode.RATE_LIMITED,
+  },
+});

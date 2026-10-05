@@ -20,6 +20,7 @@
     "demo:down": "docker compose down",
     "demo:api": "npm run dev --workspace=@smart-parking/backend",
     "demo:simulator": "npm run dev --workspace=@smart-parking/simulator",
+    "device:create": "npm run device:create --workspace=@smart-parking/backend",
     "qa:concurrency": "npx tsx qa/concurrency.ts",
     "qa:contract": "npx vitest run qa/contract.test.ts",
     "qa:load": "k6 run qa/k6-load.js",

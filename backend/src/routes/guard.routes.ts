@@ -1,100 +1,106 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { validate } from '../middleware/validate.js';
 import { sendSuccess } from '../lib/respond.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { guardCheckInRateLimiter } from '../middleware/rateLimiter.js';
 import {
   GuardCheckInRequestSchema,
   GuardWalkInRequestSchema,
-  SlotStatus,
+  Role,
   BookingStatus,
-  SlotSource,
-  GuardBoard,
   BookingView,
   GuardWalkInResponseData,
+  SlotSource,
 } from '@smart-parking/shared';
+import {
+  getGuardBoard,
+  checkInBooking,
+  guardSetSlotStatus,
+} from '../services/guard.service.js';
 
 export const guardRouter = Router();
 
-const mockBooking: BookingView = {
-  id: 'bk_stub_001',
-  slotId: 'slot_stub_001',
-  status: BookingStatus.CONFIRMED,
-  startTime: '2026-10-05T12:00:00.000Z',
-  endTime: '2026-10-05T13:00:00.000Z',
-  amountPaise: 4000,
-  heldUntil: null,
-  bookingCode: 'ABC234',
-  vehicleNumber: 'MH12AB1234',
-  checkedInAt: null,
-};
+// Protect all guard routes per Contract C5 & Security Rule 14
+guardRouter.use(requireAuth);
+guardRouter.use(requireRole(Role.GUARD, Role.ADMIN));
 
 // GET /api/v1/guard/lots/:lotId/board
-// STUB: replace in Stage 5
-guardRouter.get('/lots/:lotId/board', (req: Request, res: Response) => {
-  // STUB: replace in Stage 5
-  const lotId = Array.isArray(req.params.lotId) ? req.params.lotId[0]! : (req.params.lotId ?? 'lot_stub_001');
-  const data: GuardBoard = {
-    lot: {
-      id: lotId,
-      name: 'FC Road Smart Parking',
-      totalSlots: 50,
-    },
-    slots: [
-      {
-        slotId: 'slot_stub_001',
-        slotNumber: 'A1',
-        status: SlotStatus.RESERVED,
-        source: SlotSource.APP,
-        booking: {
-          bookingId: mockBooking.id,
-          bookingCode: mockBooking.bookingCode,
-          vehicleNumber: mockBooking.vehicleNumber,
-          startTime: mockBooking.startTime,
-          endTime: mockBooking.endTime,
-          status: mockBooking.status,
-          checkedInAt: null,
-        },
-      },
-      {
-        slotId: 'slot_stub_002',
-        slotNumber: 'A2',
-        status: SlotStatus.AVAILABLE,
-        source: SlotSource.SIM,
-        booking: null,
-      },
-    ],
-  };
-  sendSuccess(res, data, 200);
-});
+// Per Frozen Contract C7 & C9
+guardRouter.get(
+  '/lots/:lotId/board',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const lotId = Array.isArray(req.params.lotId)
+        ? req.params.lotId[0]!
+        : (req.params.lotId ?? '');
+      const guardUserId = req.user!.userId;
+
+      const board = await getGuardBoard(guardUserId, lotId);
+      sendSuccess(res, board, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // POST /api/v1/guard/check-in
-// STUB: replace in Stage 5
+// Per Frozen Contract C7, C9 & Security Rule 14 (strict rate limit against code guessing)
 guardRouter.post(
   '/check-in',
+  guardCheckInRateLimiter,
   validate({ body: GuardCheckInRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 5
-    const data: BookingView = {
-      ...mockBooking,
-      bookingCode: req.body.bookingCode,
-      checkedInAt: '2026-10-05T12:05:00.000Z',
-    };
-    sendSuccess(res, data, 200);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const guardUserId = req.user!.userId;
+      const { bookingCode } = req.body;
+
+      const booking = await checkInBooking(guardUserId, bookingCode);
+
+      // Sanitize response to omit user private data (Security Rule 14)
+      const data: BookingView = {
+        id: booking.id,
+        slotId: booking.slotId,
+        status: booking.status as BookingStatus,
+        startTime: booking.startTime.toISOString(),
+        endTime: booking.endTime.toISOString(),
+        amountPaise: booking.amountPaise,
+        heldUntil: booking.heldUntil ? booking.heldUntil.toISOString() : null,
+        bookingCode: booking.bookingCode,
+        vehicleNumber: booking.vehicleNumber,
+        checkedInAt: booking.checkedInAt ? booking.checkedInAt.toISOString() : null,
+      };
+
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // POST /api/v1/guard/slots/:slotId/walk-in
-// STUB: replace in Stage 5
+// Per Frozen Contract C7 & C9
 guardRouter.post(
   '/slots/:slotId/walk-in',
   validate({ body: GuardWalkInRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 5
-    const slotId = Array.isArray(req.params.slotId) ? req.params.slotId[0]! : (req.params.slotId ?? 'slot_stub_001');
-    const data: GuardWalkInResponseData = {
-      slotId,
-      status: req.body.status === 'OCCUPIED' ? SlotStatus.OCCUPIED : SlotStatus.AVAILABLE,
-      source: SlotSource.GUARD,
-    };
-    sendSuccess(res, data, 200);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const slotId = Array.isArray(req.params.slotId)
+        ? req.params.slotId[0]!
+        : (req.params.slotId ?? '');
+      const guardUserId = req.user!.userId;
+      const { status } = req.body;
+
+      const result = await guardSetSlotStatus(guardUserId, slotId, status);
+
+      const data: GuardWalkInResponseData = {
+        slotId: result.slotId,
+        status: result.status,
+        source: SlotSource.GUARD,
+      };
+
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
   }
 );
