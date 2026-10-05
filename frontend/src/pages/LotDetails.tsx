@@ -10,6 +10,7 @@ import { TimeWindowSelector, TimeWindow } from '../components/slot/TimeWindowSel
 import { BusyChart } from '../features/stats/BusyChart';
 import { useAuthStore } from '../stores/authStore';
 import { useBookingStore } from '../stores/bookingStore';
+import { validateVehicleNumber } from '../schemas/bookingSchemas';
 import { MapPin, Navigation, ArrowLeft, Clock, Car, AlertCircle } from 'lucide-react';
 
 export const LotDetails: React.FC = () => {
@@ -118,10 +119,25 @@ export const LotDetails: React.FC = () => {
       navigate(`/booking/confirm/${booking.id}`);
     },
     onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Slot could not be held. It may have just been reserved.';
-      setErrorMessage(msg);
+      const axiosErr = err as {
+        response?: {
+          status?: number;
+          data?: { code?: string; message?: string };
+        };
+      };
+      if (
+        axiosErr?.response?.status === 409 ||
+        axiosErr?.response?.data?.code === 'SLOT_UNAVAILABLE' ||
+        axiosErr?.response?.data?.message?.toLowerCase().includes('just taken')
+      ) {
+        setErrorMessage('Slot just taken. Please select another slot.');
+        setSelectedSlotLocal(null);
+        queryClient.invalidateQueries({ queryKey: ['parking-slots', id] });
+      } else {
+        const msg =
+          axiosErr?.response?.data?.message || 'Slot could not be held. It may have just been reserved.';
+        setErrorMessage(msg);
+      }
     },
   });
 
@@ -130,6 +146,12 @@ export const LotDetails: React.FC = () => {
       navigate('/login', { state: { from: { pathname: `/lots/${id}` } } });
       return;
     }
+    const valResult = validateVehicleNumber(vehicleNumber);
+    if (!valResult.isValid) {
+      setErrorMessage(valResult.error || 'Invalid vehicle number');
+      return;
+    }
+    setErrorMessage(null);
     holdSlotMutation.mutate();
   };
 
@@ -191,6 +213,7 @@ export const LotDetails: React.FC = () => {
       {errorMessage && (
         <div
           role="alert"
+          data-testid="hold-error-alert"
           className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 text-sm"
         >
           <AlertCircle className="w-5 h-5 flex-shrink-0" />

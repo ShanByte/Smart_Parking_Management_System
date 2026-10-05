@@ -43,7 +43,7 @@ export type HourlyStatItem = z.infer<typeof HourlyStatItemSchema>;
 /**
  * Helper to format 24-hour integer into user-friendly 12-hour AM/PM label
  */
-export function formatHourLabel(hour: number): string {
+function formatHourLabel(hour: number): string {
   if (hour === 0) return '12 AM';
   if (hour < 12) return `${hour} AM`;
   if (hour === 12) return '12 PM';

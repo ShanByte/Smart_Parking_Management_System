@@ -13,12 +13,14 @@ import { SlotStatus, BookingStatus } from '../../types/contract';
 
 interface StatusBadgeProps {
   status: SlotStatus | BookingStatus;
+  label?: string;
   size?: 'sm' | 'md';
   className?: string;
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({
   status,
+  label,
   size = 'md',
   className,
 }) => {
@@ -89,7 +91,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     }
   };
 
-  const { label, icon: Icon, colors } = getBadgeConfig();
+  const { label: configLabel, icon: Icon, colors } = getBadgeConfig();
+  const displayLabel = label || configLabel;
 
   const sizeClasses =
     size === 'sm' ? 'text-xs px-2 py-0.5 gap-1' : 'text-xs font-semibold px-2.5 py-1 gap-1.5';
@@ -106,7 +109,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       )}
     >
       <Icon className={size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
-      <span>{label}</span>
+      <span>{displayLabel}</span>
     </span>
   );
 };

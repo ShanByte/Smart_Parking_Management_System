@@ -37,6 +37,11 @@ export const TimeWindowSelector: React.FC<TimeWindowSelectorProps> = ({
   const estimatedPaise = Math.ceil(durationHours * pricePerHourPaise);
   const estimatedRupees = (estimatedPaise / 100).toFixed(0);
 
+  const formatDuration = (hours: number) => {
+    if (hours < 1) return `${Math.round(hours * 60)} min`;
+    return `${hours} hr${hours > 1 ? 's' : ''}`;
+  };
+
   const startOptions = [
     { label: 'Now', offset: 0 },
     { label: '+15 min', offset: 15 },
@@ -45,11 +50,13 @@ export const TimeWindowSelector: React.FC<TimeWindowSelectorProps> = ({
   ];
 
   const durationOptions = [
+    { label: '15m', hours: 0.25 },
+    { label: '30m', hours: 0.5 },
     { label: '1 hr', hours: 1 },
     { label: '2 hrs', hours: 2 },
-    { label: '3 hrs', hours: 3 },
     { label: '4 hrs', hours: 4 },
     { label: '8 hrs', hours: 8 },
+    { label: '24 hrs', hours: 24 },
   ];
 
   return (
@@ -60,7 +67,7 @@ export const TimeWindowSelector: React.FC<TimeWindowSelectorProps> = ({
           <CardTitle className="text-sm font-semibold">Select Time Window</CardTitle>
         </div>
         <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
-          Estimated: ₹{estimatedRupees} ({durationHours} hr{durationHours > 1 ? 's' : ''})
+          Estimated: ₹{estimatedRupees} ({formatDuration(durationHours)})
         </span>
       </CardHeader>
 
@@ -93,7 +100,7 @@ export const TimeWindowSelector: React.FC<TimeWindowSelectorProps> = ({
           <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
             Parking Duration
           </label>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
             {durationOptions.map((opt) => (
               <button
                 key={opt.hours}
@@ -130,7 +137,7 @@ export const TimeWindowSelector: React.FC<TimeWindowSelectorProps> = ({
             </span>
           </div>
           <span className="font-semibold text-slate-800">
-            {durationHours} hr{durationHours > 1 ? 's' : ''} window
+            {formatDuration(durationHours)} window
           </span>
         </div>
       </CardContent>

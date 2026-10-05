@@ -20,9 +20,14 @@ interface MockResponse {
 
 // In-memory mutable state for mock session
 let activeBookings = [...mockBookings];
-const mutableSlots: Record<string, SlotView[]> = JSON.parse(
+let mutableSlots: Record<string, SlotView[]> = JSON.parse(
   JSON.stringify(mockSlotsByLot)
 );
+
+export function resetMockState() {
+  activeBookings = [...mockBookings];
+  mutableSlots = JSON.parse(JSON.stringify(mockSlotsByLot));
+}
 
 export function handleMockRequest(
   method: string,
@@ -171,6 +176,28 @@ export function handleMockRequest(
   // 10. POST /bookings (holdSlot)
   if (normalizedMethod === 'POST' && path === '/bookings') {
     const req = (body as { slotId: string; startTime: string; endTime: string; vehicleNumber?: string }) || {};
+
+    // 409 Conflict Simulation (C4 / D5):
+    // Conflict if slotId is explicitly a conflict id or already HELD / OCCUPIED / RESERVED
+    let isUnavailable = req.slotId === 'slot-conflict' || req.slotId === 'slot-unavailable';
+    for (const lotId of Object.keys(mutableSlots)) {
+      const slot = mutableSlots[lotId].find((s) => s.id === req.slotId);
+      if (slot && (slot.status === 'HELD' || slot.status === 'OCCUPIED' || slot.status === 'RESERVED')) {
+        isUnavailable = true;
+      }
+    }
+
+    if (isUnavailable) {
+      return {
+        status: 409,
+        data: {
+          success: false,
+          code: 'SLOT_UNAVAILABLE',
+          message: 'Slot just taken',
+        },
+      };
+    }
+
     const bookingCode = 'BK' + Math.floor(1000 + Math.random() * 9000);
 
     const newBooking: Booking = {
@@ -233,6 +260,10 @@ export function handleMockRequest(
         data: { success: true, data: booking },
       };
     }
+    return {
+      status: 404,
+      data: { success: false, code: 'NOT_FOUND', message: 'Booking not found' },
+    };
   }
 
   // 13. POST /payments/create-order
@@ -251,7 +282,29 @@ export function handleMockRequest(
     };
   }
 
-  // 14. POST /payments/demo-confirm
+  // 14. POST /payments/verify
+  if (normalizedMethod === 'POST' && path === '/payments/verify') {
+    const req = (body as { bookingId: string; razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string }) || {};
+    const booking = activeBookings.find((b) => b.id === req.bookingId);
+    if (booking) {
+      booking.status = 'CONFIRMED';
+      booking.heldUntil = null;
+      for (const lotId of Object.keys(mutableSlots)) {
+        const slot = mutableSlots[lotId].find((s) => s.id === booking.slotId);
+        if (slot) slot.status = 'RESERVED';
+      }
+      return {
+        status: 200,
+        data: { success: true, data: booking },
+      };
+    }
+    return {
+      status: 404,
+      data: { success: false, code: 'NOT_FOUND', message: 'Booking not found' },
+    };
+  }
+
+  // 15. POST /payments/demo-confirm
   if (normalizedMethod === 'POST' && path === '/payments/demo-confirm') {
     const req = (body as { bookingId: string }) || {};
     const booking = activeBookings.find((b) => b.id === req.bookingId);
@@ -267,6 +320,10 @@ export function handleMockRequest(
         data: { success: true, data: booking },
       };
     }
+    return {
+      status: 404,
+      data: { success: false, code: 'NOT_FOUND', message: 'Booking not found' },
+    };
   }
 
   // 15. GET /guard/lots/:lotId/board
