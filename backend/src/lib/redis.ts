@@ -52,7 +52,6 @@ export function createSocketIoAdapterConnections(): { pubClient: Redis; subClien
  * Shared singleton Redis instance per FROZEN CONTRACT C3
  */
 declare global {
-  // eslint-disable-next-line no-var
   var redisGlobal: Redis | undefined;
 }
 

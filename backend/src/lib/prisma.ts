@@ -4,7 +4,6 @@ import { PrismaClient } from '@prisma/client';
  * Shared Prisma Client singleton per FROZEN CONTRACT C3
  */
 declare global {
-  // eslint-disable-next-line no-var
   var prismaGlobal: PrismaClient | undefined;
 }
 
