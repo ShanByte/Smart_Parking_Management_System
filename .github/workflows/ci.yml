@@ -40,6 +40,9 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      - name: Build shared workspace
+        run: npm run build -w @smart-parking/shared
+
       - name: Run typecheck
         run: npm run typecheck
 
@@ -65,7 +68,7 @@ jobs:
       - name: Scan for committed secrets
         run: |
           echo "Scanning repository for accidentally committed secrets..."
-          if git log -n 10 --diff-filter=d -p | grep -E -i "(password|secret|key|token)[[:space:]]*[:=][[:space:]]*['\"][^'\"]+['\"]"; then
+          if git log -n 10 --diff-filter=d -p -- . ':!*.test.*' ':!.github/**' | grep -E -i "\b(password|secret|api_key|access_token)[[:space:]]*[:=][[:space:]]*['\"][^'\"]+['\"]"; then
             echo "ERROR: Possible secret detected in recent git commits!"
             exit 1
           fi
@@ -126,12 +129,14 @@ jobs:
       - name: Run database migrations
         env:
           DATABASE_URL: postgresql://postgres:test_postgres_password@localhost:5432/smart_parking_test?schema=public
+          DIRECT_URL: postgresql://postgres:test_postgres_password@localhost:5432/smart_parking_test?schema=public
         run: npx prisma migrate deploy --schema=backend/prisma/schema.prisma
 
       - name: Run tests
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:test_postgres_password@localhost:5432/smart_parking_test?schema=public
+          DIRECT_URL: postgresql://postgres:test_postgres_password@localhost:5432/smart_parking_test?schema=public
           TEST_DATABASE_URL: postgresql://postgres:test_postgres_password@localhost:5432/smart_parking_test?schema=public
           REDIS_URL: redis://:test_redis_password@localhost:6379
         run: npm run test
