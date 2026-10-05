@@ -1,0 +1,15 @@
+{
+  "description": "Newman contract test configuration against shared/openapi.json",
+  "collection": "shared/openapi.json",
+  "environment": {
+    "values": [
+      {
+        "key": "baseUrl",
+        "value": "http://localhost:4000/api/v1",
+        "enabled": true
+      }
+    ]
+  },
+  "reporters": ["cli"],
+  "bail": false
+}
