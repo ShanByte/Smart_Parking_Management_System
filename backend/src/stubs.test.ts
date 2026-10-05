@@ -7,6 +7,7 @@ import { hashPassword, signAccessToken, generateRefreshToken, hashToken } from '
 import { Role, SlotStatus } from '@smart-parking/shared';
 import * as lotsService from './services/lots.service.js';
 import * as reservationsService from './services/reservations.service.js';
+import * as paymentsService from './services/payments.service.js';
 import * as statsService from './services/stats.service.js';
 import {
   RegisterResponseDataSchema,
@@ -321,9 +322,20 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
   });
 
   describe('Payments Endpoints', () => {
+    const userPaymentToken = signAccessToken({ sub: 'usr_001', role: Role.USER });
+    const adminPaymentToken = signAccessToken({ sub: 'usr_admin', role: Role.ADMIN });
+
     it('POST /api/v1/payments/create-order matches CreatePaymentOrderResponseDataSchema', async () => {
+      vi.spyOn(paymentsService, 'createOrder').mockResolvedValue({
+        orderId: 'order_123',
+        amountPaise: 4000,
+        currency: 'INR',
+        keyId: 'rzp_test_stub',
+      });
+
       const res = await request(app)
         .post('/api/v1/payments/create-order')
+        .set('Authorization', `Bearer ${userPaymentToken}`)
         .send({ bookingId: 'bk_001' });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -332,8 +344,25 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('POST /api/v1/payments/verify matches VerifyPaymentResponseDataSchema', async () => {
+      vi.spyOn(paymentsService, 'verifyPayment').mockResolvedValue({
+        id: 'bk_001',
+        userId: 'usr_001',
+        slotId: 'slot_001',
+        status: 'CONFIRMED',
+        startTime: new Date('2026-10-05T12:00:00.000Z'),
+        endTime: new Date('2026-10-05T13:00:00.000Z'),
+        amountPaise: 4000,
+        heldUntil: null,
+        bookingCode: 'ABC234',
+        vehicleNumber: 'MH12AB1234',
+        idempotencyKey: 'idem-12345678',
+        checkedInAt: null,
+        createdAt: new Date('2026-10-05T11:59:00.000Z'),
+      } as unknown as Booking);
+
       const res = await request(app)
         .post('/api/v1/payments/verify')
+        .set('Authorization', `Bearer ${userPaymentToken}`)
         .send({
           bookingId: 'bk_001',
           razorpayOrderId: 'order_123',
@@ -347,8 +376,19 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('POST /api/v1/payments/refund matches RefundPaymentResponseDataSchema', async () => {
+      vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+        id: 'usr_admin',
+        role: 'ADMIN',
+      } as unknown as User);
+      vi.spyOn(paymentsService, 'refundPayment').mockResolvedValue({
+        status: 'REFUNDED',
+        bookingId: 'bk_001',
+        amountPaise: 4000,
+      });
+
       const res = await request(app)
         .post('/api/v1/payments/refund')
+        .set('Authorization', `Bearer ${adminPaymentToken}`)
         .send({ bookingId: 'bk_001' });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);

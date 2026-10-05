@@ -1,5 +1,7 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { validate } from '../middleware/validate.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { paymentsRateLimiter } from '../middleware/rateLimiter.js';
 import { sendSuccess } from '../lib/respond.js';
 import { env } from '../config/env.js';
 import {
@@ -9,97 +11,129 @@ import {
   DemoConfirmPaymentRequestSchema,
   BookingStatus,
   BookingView,
-  CreatePaymentOrderResponseData,
-  VerifyPaymentResponseData,
-  RefundPaymentResponseData,
-  DemoConfirmPaymentResponseData,
+  Role,
 } from '@smart-parking/shared';
+import {
+  createOrder,
+  verifyPayment,
+  processWebhook,
+  refundPayment,
+  demoConfirmPayment,
+} from '../services/payments.service.js';
+import type { Booking } from '@prisma/client';
 
 export const paymentsRouter = Router();
 
-const mockBooking: BookingView = {
-  id: 'bk_stub_001',
-  slotId: 'slot_stub_001',
-  status: BookingStatus.CONFIRMED,
-  startTime: '2026-10-05T12:00:00.000Z',
-  endTime: '2026-10-05T13:00:00.000Z',
-  amountPaise: 4000,
-  heldUntil: null,
-  bookingCode: 'ABC234',
-  vehicleNumber: 'MH12AB1234',
-  checkedInAt: null,
-};
+// Apply payments rate limiter per Security Rule 7
+paymentsRouter.use(paymentsRateLimiter);
+
+function formatBookingView(booking: Booking): BookingView {
+  return {
+    id: booking.id,
+    slotId: booking.slotId,
+    status: booking.status as BookingStatus,
+    startTime: booking.startTime.toISOString(),
+    endTime: booking.endTime.toISOString(),
+    amountPaise: booking.amountPaise,
+    heldUntil: booking.heldUntil ? booking.heldUntil.toISOString() : null,
+    bookingCode: booking.bookingCode,
+    vehicleNumber: booking.vehicleNumber,
+    checkedInAt: booking.checkedInAt ? booking.checkedInAt.toISOString() : null,
+  };
+}
 
 // POST /api/v1/payments/create-order
-// STUB: replace in Stage 4
 paymentsRouter.post(
   '/create-order',
+  requireAuth,
   validate({ body: CreatePaymentOrderRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 4
-    const data: CreatePaymentOrderResponseData = {
-      orderId: 'order_stub_001',
-      amountPaise: 4000,
-      currency: 'INR',
-      keyId: env.RAZORPAY_KEY_ID ?? 'rzp_test_stub',
-    };
-    sendSuccess(res, data, 200);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await createOrder(
+        req.body.bookingId,
+        req.user!.userId,
+        req.user!.role === Role.ADMIN
+      );
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // POST /api/v1/payments/verify
-// STUB: replace in Stage 4
 paymentsRouter.post(
   '/verify',
+  requireAuth,
   validate({ body: VerifyPaymentRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 4
-    const data: VerifyPaymentResponseData = {
-      ...mockBooking,
-      id: req.body.bookingId,
-      status: BookingStatus.CONFIRMED,
-    };
-    sendSuccess(res, data, 200);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const confirmedBooking = await verifyPayment(
+        req.user!.userId,
+        req.body,
+        req.user!.role === Role.ADMIN
+      );
+      sendSuccess(res, formatBookingView(confirmedBooking), 200);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // POST /api/v1/payments/webhook
-// STUB: replace in Stage 4
-paymentsRouter.post('/webhook', (req: Request, res: Response) => {
-  // STUB: replace in Stage 4
-  sendSuccess(res, { received: true }, 200);
-});
+paymentsRouter.post(
+  '/webhook',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const signature = req.headers['x-razorpay-signature'] as string | undefined;
+      const eventId = req.headers['x-razorpay-event-id'] as string | undefined;
 
-// POST /api/v1/payments/refund
-// STUB: replace in Stage 4
+      const result = await processWebhook(req.body, signature, eventId);
+      sendSuccess(res, result, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/v1/payments/refund (ADMIN only per C7 & Security Rule 6)
 paymentsRouter.post(
   '/refund',
+  requireAuth,
+  requireRole(Role.ADMIN),
   validate({ body: RefundPaymentRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 4
-    const data: RefundPaymentResponseData = {
-      status: 'REFUNDED',
-      bookingId: req.body.bookingId,
-      amountPaise: 4000,
-    };
-    sendSuccess(res, data, 200);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await refundPayment(req.body.bookingId);
+      sendSuccess(res, result, 200);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // POST /api/v1/payments/demo-confirm (exists only when DEMO_PAY_ENABLED=true)
-// STUB: replace in Stage 4
-if (env.DEMO_PAY_ENABLED) {
-  paymentsRouter.post(
-    '/demo-confirm',
-    validate({ body: DemoConfirmPaymentRequestSchema }),
-    (req: Request, res: Response) => {
-      // STUB: replace in Stage 4
-      const data: DemoConfirmPaymentResponseData = {
-        ...mockBooking,
-        id: req.body.bookingId,
-        status: BookingStatus.CONFIRMED,
-      };
-      sendSuccess(res, data, 200);
+paymentsRouter.post(
+  '/demo-confirm',
+  (req: Request, _res: Response, next: NextFunction) => {
+    if (!env.DEMO_PAY_ENABLED) {
+      // Route is absent when disabled -> falls through to 404
+      return next();
     }
-  );
-}
+    next();
+  },
+  requireAuth,
+  validate({ body: DemoConfirmPaymentRequestSchema }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const confirmedBooking = await demoConfirmPayment(
+        req.user!.userId,
+        req.body.bookingId,
+        req.user!.role === Role.ADMIN
+      );
+      sendSuccess(res, formatBookingView(confirmedBooking), 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);

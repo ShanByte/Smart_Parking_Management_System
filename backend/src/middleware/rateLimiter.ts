@@ -14,3 +14,16 @@ export const authRateLimiter = rateLimit({
     code: ErrorCode.RATE_LIMITED,
   },
 });
+
+export const paymentsRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60, // 60 requests per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test', // Bypass in test environments
+  message: {
+    success: false,
+    message: 'Too many payment requests. Please try again later.',
+    code: ErrorCode.RATE_LIMITED,
+  },
+});

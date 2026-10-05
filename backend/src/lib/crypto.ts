@@ -49,3 +49,54 @@ export function verifyAccessTokenJwt(token: string): AccessTokenPayload {
     algorithms: ['HS256'],
   }) as AccessTokenPayload;
 }
+
+/**
+ * Verifies Razorpay payment signature using HMAC-SHA256 and timing-safe comparison (Security Rule 9)
+ */
+export function verifyPaymentSignature(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+  secret: string
+): boolean {
+  if (!orderId || !paymentId || !signature || !secret) {
+    return false;
+  }
+  const payload = `${orderId}|${paymentId}`;
+  const generatedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+
+  const sigBuffer = Buffer.from(signature, 'utf8');
+  const genBuffer = Buffer.from(generatedSignature, 'utf8');
+  if (sigBuffer.length !== genBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(sigBuffer, genBuffer);
+}
+
+/**
+ * Verifies Razorpay webhook signature using HMAC-SHA256 and timing-safe comparison (Security Rule 9)
+ */
+export function verifyWebhookSignature(
+  rawBody: Buffer | string,
+  signature: string,
+  secret: string
+): boolean {
+  if (!rawBody || !signature || !secret) {
+    return false;
+  }
+  const bodyBuffer = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody, 'utf8');
+  const generatedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(bodyBuffer)
+    .digest('hex');
+
+  const sigBuffer = Buffer.from(signature, 'utf8');
+  const genBuffer = Buffer.from(generatedSignature, 'utf8');
+  if (sigBuffer.length !== genBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(sigBuffer, genBuffer);
+}
