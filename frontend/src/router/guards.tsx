@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Role } from '../types/contract';
+import { getRoleHomePath } from '../utils/roles';
 
 interface ProtectedRouteProps {
   children: React.ReactElement;
@@ -12,13 +13,18 @@ interface ProtectedRouteProps {
  * If not authenticated, redirects to /login with state to preserve target location.
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, isInitialized } = useAuthStore();
   const location = useLocation();
 
-  if (isLoading) {
+  if (isLoading && !isInitialized) {
     return (
-      <div className="flex items-center justify-center p-12 text-slate-500">
-        Checking session...
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex items-center justify-center p-12 text-slate-500 text-sm"
+      >
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 mr-2.5" />
+        Restoring session...
       </div>
     );
   }
@@ -37,18 +43,24 @@ interface RoleGuardProps {
 
 /**
  * RoleGuard: checks both authentication and role authorization.
+ * Redirects unauthorized roles directly to their respective home screen.
  */
 export const RoleGuard: React.FC<RoleGuardProps> = ({
   children,
   allowedRoles,
 }) => {
-  const { user, isAuthenticated, isLoading } = useAuthStore();
+  const { user, isAuthenticated, isLoading, isInitialized } = useAuthStore();
   const location = useLocation();
 
-  if (isLoading) {
+  if (isLoading && !isInitialized) {
     return (
-      <div className="flex items-center justify-center p-12 text-slate-500">
-        Verifying permissions...
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex items-center justify-center p-12 text-slate-500 text-sm"
+      >
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 mr-2.5" />
+        Verifying role authorization...
       </div>
     );
   }
@@ -58,13 +70,9 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   }
 
   if (!allowedRoles.includes(user.role)) {
-    // Role-based redirection:
-    // If a GUARD lands on user routes, redirect to /guard
-    if (user.role === 'GUARD') {
-      return <Navigate to="/guard" replace />;
-    }
-    // If a USER lands on guard/admin routes, redirect to home
-    return <Navigate to="/" replace />;
+    // Send role to its home path
+    const homePath = getRoleHomePath(user.role);
+    return <Navigate to={homePath} replace />;
   }
 
   return children;

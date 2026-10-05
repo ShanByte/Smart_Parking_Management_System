@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/common/C
 import { Button } from '../components/common/Button';
 import { SlotCell } from '../components/common/SlotCell';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { BusyChart } from '../features/stats/BusyChart';
 import { useAuthStore } from '../stores/authStore';
 import { useBookingStore } from '../stores/bookingStore';
 import { MapPin, Navigation, ArrowLeft, Clock, Car, AlertCircle } from 'lucide-react';
@@ -235,16 +236,9 @@ export const LotDetails: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Integration Mount Point for Member 4: BusyChart */}
+      {/* Occupancy Analytics (BusyChart by Member 4) */}
       <div id="busy-chart-mount-point" className="mt-8">
-        <Card className="border-dashed border-2 border-slate-200 bg-slate-50/60 p-6 text-center">
-          <p className="text-sm font-semibold text-slate-700">
-            Occupancy Analytics (Member 4 Mount Point)
-          </p>
-          <p className="text-xs text-slate-500 mt-1">
-            BusyChart ({`{ lotId: "${lot.id}" }`}) will be mounted here by Member 4
-          </p>
-        </Card>
+        <BusyChart lotId={lot.id} />
       </div>
     </div>
   );
