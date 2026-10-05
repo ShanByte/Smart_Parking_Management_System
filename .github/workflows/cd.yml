@@ -39,10 +39,10 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
-          if [ -d "backend/prisma" ]; then
+          if [ -n "$DATABASE_URL" ] && [ -d "backend/prisma" ]; then
             npx -w backend prisma migrate deploy
           else
-            echo "backend/prisma does not exist yet; skipping database migration."
+            echo "STAGING_DATABASE_URL secret is not configured; skipping staging database migration."
           fi
 
       - name: Deploy to Staging Provider
@@ -79,10 +79,10 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
-          if [ -d "backend/prisma" ]; then
+          if [ -n "$DATABASE_URL" ] && [ -d "backend/prisma" ]; then
             npx -w backend prisma migrate deploy
           else
-            echo "backend/prisma does not exist yet; skipping database migration."
+            echo "PRODUCTION_DATABASE_URL secret is not configured; skipping production database migration."
           fi
 
       - name: Deploy to Production Provider

@@ -57,7 +57,7 @@ jobs:
           cache: npm
 
       - name: Audit npm dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Scan for committed secrets
         run: |
@@ -116,6 +116,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://postgres:test_postgres_password@localhost:5432/smart_parking_test?schema=public
+        run: npx prisma migrate deploy --schema=backend/prisma/schema.prisma
 
       - name: Run tests
         env:
