@@ -20,5 +20,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    env: {
+      VITE_USE_MOCKS: 'true',
+    },
   },
 });
