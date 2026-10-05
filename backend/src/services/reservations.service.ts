@@ -7,6 +7,7 @@ import {
   ForbiddenError,
 } from '../lib/errors.js';
 import { ErrorCode, SlotStatus } from '@smart-parking/shared';
+import { emitSlotUpdated, emitLotUpdated } from '../sockets/index.js';
 import crypto from 'node:crypto';
 
 const BOOKING_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -556,10 +557,11 @@ export async function expireHolds(): Promise<number> {
   });
 
   let expiredCount = 0;
+  const affectedLots = new Set<string>();
 
   for (const candidate of expiredHoldCandidates) {
     try {
-      await prisma.$transaction(
+      const result = await prisma.$transaction(
         async (tx) => {
           // Lock slot row FIRST, booking row SECOND per Amendment F2
           await tx.$queryRaw`
@@ -588,6 +590,7 @@ export async function expireHolds(): Promise<number> {
               where: { id: candidate.slotId },
             });
 
+            let freed: { slotId: string; parkingLotId: string } | null = null;
             if (slot && slot.status === 'HELD') {
               await tx.parkingSlot.update({
                 where: { id: candidate.slotId },
@@ -598,19 +601,165 @@ export async function expireHolds(): Promise<number> {
                   statusUpdatedAt: new Date(),
                 },
               });
+              freed = { slotId: slot.id, parkingLotId: slot.parkingLotId };
             }
 
-            expiredCount++;
+            return { expired: true, freed };
           }
+          return { expired: false, freed: null };
         },
         {
           isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
         }
       );
+
+      if (result.expired) {
+        expiredCount++;
+      }
+      if (result.freed) {
+        affectedLots.add(result.freed.parkingLotId);
+        emitSlotUpdated({
+          slotId: result.freed.slotId,
+          parkingLotId: result.freed.parkingLotId,
+          status: SlotStatus.AVAILABLE,
+        });
+      }
     } catch (err) {
       console.error(`Failed to expire hold for booking ${candidate.id}:`, err);
     }
   }
 
+  // Broadcast lot freeCounts after all commits
+  for (const lotId of affectedLots) {
+    try {
+      const lotStats = await prisma.parkingSlot.aggregate({
+        where: { parkingLotId: lotId },
+        _count: { id: true },
+      });
+      const freeSlots = await prisma.parkingSlot.count({
+        where: { parkingLotId: lotId, status: SlotStatus.AVAILABLE },
+      });
+      emitLotUpdated({
+        parkingLotId: lotId,
+        freeCount: freeSlots,
+        totalSlots: lotStats._count.id,
+      });
+    } catch {
+      // Ignore broadcast errors
+    }
+  }
+
   return expiredCount;
+}
+
+/**
+ * Sweeps and completes CONFIRMED bookings past their endTime per C9 & Stage 6.
+ * Marks booking COMPLETED and frees the slot to AVAILABLE (unless physically OCCUPIED).
+ * Emits real-time slot and lot updates after transaction commits.
+ */
+export async function completePastBookings(): Promise<number> {
+  const now = new Date();
+
+  const pastBookings = await prisma.booking.findMany({
+    where: {
+      status: 'CONFIRMED',
+      endTime: { lte: now },
+    },
+    select: {
+      id: true,
+      slotId: true,
+    },
+  });
+
+  let completedCount = 0;
+  const affectedLots = new Set<string>();
+
+  for (const candidate of pastBookings) {
+    try {
+      const result = await prisma.$transaction(
+        async (tx) => {
+          // Lock slot row FIRST, booking row SECOND per Amendment F2
+          await tx.$queryRaw`
+            SELECT id FROM "ParkingSlot" WHERE id = ${candidate.slotId} FOR UPDATE
+          `;
+          await tx.$queryRaw`
+            SELECT id FROM "Booking" WHERE id = ${candidate.id} FOR UPDATE
+          `;
+
+          const booking = await tx.booking.findUnique({
+            where: { id: candidate.id },
+          });
+
+          if (booking && booking.status === 'CONFIRMED' && booking.endTime <= now) {
+            await tx.booking.update({
+              where: { id: candidate.id },
+              data: {
+                status: 'COMPLETED',
+              },
+            });
+
+            const slot = await tx.parkingSlot.findUnique({
+              where: { id: candidate.slotId },
+            });
+
+            let freed: { slotId: string; parkingLotId: string } | null = null;
+            // Free slot to AVAILABLE unless sensor or guard marked it OCCUPIED
+            if (slot && slot.status !== 'OCCUPIED') {
+              await tx.parkingSlot.update({
+                where: { id: candidate.slotId },
+                data: {
+                  status: 'AVAILABLE',
+                  source: 'APP',
+                  statusUpdatedAt: new Date(),
+                },
+              });
+              freed = { slotId: slot.id, parkingLotId: slot.parkingLotId };
+            }
+
+            return { completed: true, freed };
+          }
+          return { completed: false, freed: null };
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+        }
+      );
+
+      if (result.completed) {
+        completedCount++;
+      }
+      if (result.freed) {
+        affectedLots.add(result.freed.parkingLotId);
+        emitSlotUpdated({
+          slotId: result.freed.slotId,
+          parkingLotId: result.freed.parkingLotId,
+          status: SlotStatus.AVAILABLE,
+        });
+      }
+    } catch (err) {
+      console.error(`Failed to complete booking ${candidate.id}:`, err);
+    }
+  }
+
+  // Broadcast lot freeCounts after all commits
+  for (const lotId of affectedLots) {
+    try {
+      const lotStats = await prisma.parkingSlot.aggregate({
+        where: { parkingLotId: lotId },
+        _count: { id: true },
+      });
+      const freeSlots = await prisma.parkingSlot.count({
+        where: { parkingLotId: lotId, status: SlotStatus.AVAILABLE },
+      });
+      emitLotUpdated({
+        parkingLotId: lotId,
+        freeCount: freeSlots,
+        totalSlots: lotStats._count.id,
+      });
+    } catch {
+      // Ignore broadcast errors
+    }
+  }
+
+  return completedCount;
 }
