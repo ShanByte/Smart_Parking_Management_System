@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { ParkingLot, SlotView, Booking } from '../types/contract';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/common/Card';
+import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
-import { SlotCell } from '../components/common/SlotCell';
-import { StatusBadge } from '../components/common/StatusBadge';
+import { SlotGrid } from '../components/slot/SlotGrid';
+import { TimeWindowSelector, TimeWindow } from '../components/slot/TimeWindowSelector';
 import { BusyChart } from '../features/stats/BusyChart';
 import { useAuthStore } from '../stores/authStore';
 import { useBookingStore } from '../stores/bookingStore';
@@ -23,8 +23,25 @@ export const LotDetails: React.FC = () => {
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // 1. Fetch Lot Details
-  const { data: lot, isLoading: lotLoading } = useQuery<ParkingLot>({
+  // Time window state for C7 GET /parking-lots/:id/slots?from=&to=
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>({
+    from: new Date().toISOString(),
+    to: new Date(Date.now() + 3600 * 1000).toISOString(),
+    durationHours: 1,
+  });
+
+  const handleTimeWindowChange = useCallback((tw: TimeWindow) => {
+    setTimeWindow(tw);
+    // Clear slot selection if window changes
+    setSelectedSlotLocal(null);
+  }, []);
+
+  // 1. Fetch Lot Details with React Query
+  const {
+    data: lot,
+    isLoading: lotLoading,
+    isError: lotError,
+  } = useQuery<ParkingLot>({
     queryKey: ['parking-lot', id],
     queryFn: async () => {
       const res = await api.get<{ success: boolean; data: ParkingLot }>(`/parking-lots/${id}`);
@@ -33,32 +50,53 @@ export const LotDetails: React.FC = () => {
     enabled: !!id,
   });
 
-  // 2. Fetch Slots for this lot
-  const { data: slots, isLoading: slotsLoading } = useQuery<SlotView[]>({
-    queryKey: ['parking-slots', id],
+  // 2. Fetch User's Own Bookings with React Query (to color own RESERVED slots blue)
+  const { data: userBookings = [] } = useQuery<Booking[]>({
+    queryKey: ['bookings-my'],
     queryFn: async () => {
-      const res = await api.get<{ success: boolean; data: SlotView[] }>(`/parking-lots/${id}/slots`);
+      const res = await api.get<{ success: boolean; data: Booking[] }>('/bookings/my');
+      return res.data.data;
+    },
+    enabled: isAuthenticated,
+  });
+
+  // 3. Fetch Slots with Time Window query params with React Query
+  const {
+    data: slots,
+    isLoading: slotsLoading,
+    isError: slotsError,
+    error: slotsErrorObj,
+    refetch: refetchSlots,
+  } = useQuery<SlotView[]>({
+    queryKey: ['parking-slots', id, timeWindow.from, timeWindow.to],
+    queryFn: async () => {
+      const res = await api.get<{ success: boolean; data: SlotView[] }>(
+        `/parking-lots/${id}/slots`,
+        {
+          params: {
+            from: timeWindow.from,
+            to: timeWindow.to,
+          },
+        }
+      );
       return res.data.data;
     },
     enabled: !!id,
-    refetchInterval: 5000, // Poll every 5s for live status updates in mock mode
+    refetchInterval: 10000,
   });
 
-  // 3. Mutation: Hold Slot (POST /bookings)
+  // 4. Hold Slot Mutation (POST /bookings)
   const holdSlotMutation = useMutation({
     mutationFn: async () => {
       if (!selectedSlotLocal) throw new Error('Please select a slot');
       setErrorMessage(null);
 
-      const startTime = new Date().toISOString();
-      const endTime = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour booking
-
       const res = await api.post<{ success: boolean; data: Booking }>(
         '/bookings',
         {
           slotId: selectedSlotLocal.id,
-          startTime,
-          endTime,
+          startTime: timeWindow.from,
+          endTime: timeWindow.to,
           vehicleNumber: vehicleNumber.trim() ? vehicleNumber.toUpperCase() : undefined,
         },
         {
@@ -76,12 +114,13 @@ export const LotDetails: React.FC = () => {
         setActiveBooking(booking);
       }
       queryClient.invalidateQueries({ queryKey: ['parking-slots', id] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-my'] });
       navigate(`/booking/confirm/${booking.id}`);
     },
     onError: (err: unknown) => {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Slot could not be held. It may have just been taken.';
+          ?.message || 'Slot could not be held. It may have just been reserved.';
       setErrorMessage(msg);
     },
   });
@@ -94,21 +133,21 @@ export const LotDetails: React.FC = () => {
     holdSlotMutation.mutate();
   };
 
-  if (lotLoading || slotsLoading) {
+  if (lotLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" role="status" aria-label="Loading lot details">
         <div className="h-8 bg-slate-200 rounded w-1/4 animate-pulse"></div>
         <div className="h-64 bg-slate-100 rounded-xl animate-pulse"></div>
       </div>
     );
   }
 
-  if (!lot) {
+  if (lotError || !lot) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-600">Parking lot not found.</p>
+        <p className="text-slate-600 font-semibold">Parking lot not found or unavailable.</p>
         <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>
-          Back to Lots
+          Return to Map
         </Button>
       </div>
     );
@@ -116,33 +155,50 @@ export const LotDetails: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Back button & Title */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/')}
-          className="p-2"
-        >
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{lot.name}</h1>
-          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-            <MapPin className="w-3.5 h-3.5" />
-            {lot.address}
-          </p>
+      {/* Top Header & Navigation */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/')}
+            className="p-2"
+            aria-label="Back to map"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-600" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{lot.name}</h1>
+            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3.5 h-3.5 text-slate-400" />
+              {lot.address}
+            </p>
+          </div>
         </div>
+
+        <a
+          href={`https://www.google.com/maps/dir/?api=1&destination=${lot.latitude},${lot.longitude}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Button variant="outline" size="sm">
+            <Navigation className="w-4 h-4 mr-1.5" />
+            Directions
+          </Button>
+        </a>
       </div>
 
       {errorMessage && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 text-sm">
+        <div
+          role="alert"
+          className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 text-sm"
+        >
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Lot Info Card */}
+      {/* Pricing and Stats Bar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4 flex items-center justify-between">
           <span className="text-xs font-medium text-slate-500">Hourly Rate</span>
@@ -157,84 +213,76 @@ export const LotDetails: React.FC = () => {
           </span>
         </Card>
         <Card className="p-4 flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-500">Directions</span>
-          <a
-            href={`https://www.google.com/maps/dir/?api=1&destination=${lot.latitude},${lot.longitude}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:underline"
-          >
-            <Navigation className="w-3.5 h-3.5" />
-            Open Maps
-          </a>
+          <span className="text-xs font-medium text-slate-500">Operating Status</span>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+            Open 24/7 &bull; Realtime
+          </span>
         </Card>
       </div>
 
-      {/* Slot Status Legend (D3) */}
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 text-xs">
-        <span className="font-semibold text-slate-700 mr-2">Slot Legend:</span>
-        <StatusBadge status="AVAILABLE" size="sm" />
-        <StatusBadge status="HELD" size="sm" />
-        <StatusBadge status="RESERVED" size="sm" />
-        <StatusBadge status="OCCUPIED" size="sm" />
-      </div>
+      {/* Time Window Selector (React Query dependency) */}
+      <TimeWindowSelector
+        pricePerHourPaise={lot.pricePerHourPaise}
+        onChange={handleTimeWindowChange}
+      />
 
-      {/* Interactive Slot Grid */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select an Available Slot</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-            {slots?.map((slot) => (
-              <SlotCell
-                key={slot.id}
-                slot={slot}
-                isSelected={selectedSlotLocal?.id === slot.id}
-                onSelect={(selected) => setSelectedSlotLocal(selected)}
-              />
-            ))}
-          </div>
+      {/* Slot Grid Container */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold text-slate-900">
+          Slot Availability Grid
+        </h3>
 
-          {/* Action Footer for Slot Reservation */}
-          {selectedSlotLocal && (
-            <div className="mt-6 pt-6 border-t border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Selected Slot:{' '}
-                  <span className="text-indigo-600 font-bold text-base">
-                    {selectedSlotLocal.slotNumber}
-                  </span>
-                </p>
-                <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                  <Clock className="w-3.5 h-3.5 text-amber-500" />
-                  Holding this slot gives you a 5-minute countdown window to complete payment
-                </p>
-              </div>
+        <SlotGrid
+          slots={slots}
+          selectedSlotId={selectedSlotLocal?.id}
+          userBookings={userBookings}
+          isLoading={slotsLoading}
+          isError={slotsError}
+          errorMessage={(slotsErrorObj as Error)?.message}
+          onRetry={() => refetchSlots()}
+          onSelectSlot={(slot) => setSelectedSlotLocal(slot)}
+        />
 
-              <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-                <input
-                  type="text"
-                  placeholder="Vehicle No (e.g. MH12AB1234)"
-                  value={vehicleNumber}
-                  onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
-                  maxLength={15}
-                  className="w-full sm:w-56 px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase font-mono"
-                />
-                <Button
-                  variant="primary"
-                  onClick={handleHoldClick}
-                  isLoading={holdSlotMutation.isPending}
-                  className="w-full sm:w-auto whitespace-nowrap"
-                >
-                  <Car className="w-4 h-4 mr-1.5" />
-                  Hold Slot & Proceed
-                </Button>
-              </div>
+        {/* Action Panel for Selected Slot */}
+        {selectedSlotLocal && (
+          <div className="mt-6 pt-6 border-t border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-indigo-50/70 p-5 rounded-2xl border border-indigo-200 shadow-xs">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                Selected Slot:{' '}
+                <span className="text-indigo-600 font-extrabold text-lg">
+                  {selectedSlotLocal.slotNumber}
+                </span>
+              </p>
+              <p className="text-xs text-slate-600 flex items-center gap-1 mt-0.5">
+                <Clock className="w-3.5 h-3.5 text-amber-500" />
+                Reserves a 5-minute hold for {timeWindow.durationHours} hr
+                {timeWindow.durationHours > 1 ? 's' : ''} parking
+              </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+              <input
+                type="text"
+                placeholder="Vehicle No (e.g. MH12AB1234)"
+                value={vehicleNumber}
+                onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                maxLength={15}
+                aria-label="Vehicle registration number"
+                className="w-full sm:w-56 px-3.5 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase font-mono"
+              />
+              <Button
+                variant="primary"
+                onClick={handleHoldClick}
+                isLoading={holdSlotMutation.isPending}
+                className="w-full sm:w-auto whitespace-nowrap font-semibold"
+              >
+                <Car className="w-4 h-4 mr-1.5" />
+                Hold Slot & Proceed
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Occupancy Analytics (BusyChart by Member 4) */}
       <div id="busy-chart-mount-point" className="mt-8">

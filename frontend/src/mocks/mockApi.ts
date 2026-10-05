@@ -31,8 +31,11 @@ export function handleMockRequest(
   _headers?: Record<string, string>
 ): MockResponse | null {
   const normalizedMethod = method.toUpperCase();
-  // Strip baseURL if present to get path
-  const path = url.replace(/^https?:\/\/[^/]+(\/api\/v1)?/, '').replace(/^\/api\/v1/, '');
+  // Strip baseURL if present to get path without query parameters
+  const path = url
+    .replace(/^https?:\/\/[^/]+(\/api\/v1)?/, '')
+    .replace(/^\/api\/v1/, '')
+    .split('?')[0];
 
   // 1. POST /auth/login
   if (normalizedMethod === 'POST' && path === '/auth/login') {

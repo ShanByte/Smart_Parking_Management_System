@@ -1,0 +1,218 @@
+import React, { useEffect, useRef } from 'react';
+import L from 'leaflet';
+import { ParkingLot } from '../../types/contract';
+import { getMarkerColor } from '../../utils/mapUtils';
+
+export interface ParkingMapProps {
+  lots: ParkingLot[];
+  selectedLotId?: string | null;
+  onSelectLot: (lot: ParkingLot) => void;
+  className?: string;
+}
+
+export const ParkingMap: React.FC<ParkingMapProps> = ({
+  lots,
+  selectedLotId,
+  onSelectLot,
+  className = 'h-[500px] w-full rounded-2xl overflow-hidden shadow-sm border border-slate-200',
+}) => {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<Record<string, L.Marker>>({});
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    // Check for existing Leaflet container
+    if (mapInstanceRef.current) return;
+
+    try {
+      // Default to Pune center coordinates [18.5204, 73.8567]
+      const map = L.map(mapContainerRef.current, {
+        center: [18.5204, 73.8567],
+        zoom: 13,
+        zoomControl: true,
+      });
+
+      const tileUrl =
+        (typeof import.meta !== 'undefined' &&
+          import.meta.env &&
+          import.meta.env.VITE_MAP_TILE_URL) ||
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+      L.tileLayer(tileUrl, {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      mapInstanceRef.current = map;
+    } catch (e) {
+      console.warn('Leaflet map initialization skipped in test environment', e);
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch {
+          // Ignore unmount error in headless env
+        }
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update markers when lots or selection change
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Clear existing markers
+    Object.values(markersRef.current).forEach((marker) => {
+      try {
+        marker.remove();
+      } catch {
+        // Ignore
+      }
+    });
+    markersRef.current = {};
+
+    lots.forEach((lot) => {
+      const { color, label } = getMarkerColor(lot.freeCount, lot.totalSlots);
+      const isSelected = selectedLotId === lot.id;
+      const priceRupees = (lot.pricePerHourPaise / 100).toFixed(0);
+
+      // Custom accessible HTML marker with icon and label text
+      const iconHtml = `
+        <div 
+          class="relative flex flex-col items-center cursor-pointer select-none transition-transform hover:scale-110"
+          style="transform: translate(-50%, -100%);"
+          aria-label="${lot.name} - ${lot.freeCount} of ${lot.totalSlots} slots available (${label})"
+        >
+          <div 
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white font-bold text-xs shadow-lg border-2 ${
+              isSelected ? 'ring-4 ring-indigo-500 scale-110' : ''
+            }"
+            style="background-color: ${color}; border-color: #ffffff;"
+          >
+            <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+            <span>${lot.freeCount} Free</span>
+          </div>
+          <div 
+            class="w-2.5 h-2.5 rotate-45 -mt-1.5 shadow-md"
+            style="background-color: ${color};"
+          ></div>
+          <span class="mt-1 px-2 py-0.5 rounded bg-white/90 text-[10px] font-semibold text-slate-800 shadow-xs border border-slate-200 whitespace-nowrap">
+            ${lot.name}
+          </span>
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        html: iconHtml,
+        className: 'parking-lot-marker-icon',
+        iconSize: [120, 50],
+        iconAnchor: [60, 50],
+      });
+
+      try {
+        const marker = L.marker([lot.latitude, lot.longitude], {
+          icon: customIcon,
+          title: `${lot.name}: ${lot.freeCount} slots free`,
+        }).addTo(map);
+
+        marker.on('click', () => {
+          onSelectLot(lot);
+          map.setView([lot.latitude, lot.longitude], 15, { animate: true });
+        });
+
+        // Popup details
+        const popupContent = `
+          <div class="p-1 space-y-1 text-slate-800 font-sans">
+            <h4 class="font-bold text-sm">${lot.name}</h4>
+            <p class="text-xs text-slate-500">${lot.address}</p>
+            <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+              <span class="font-bold" style="color: ${color};">${lot.freeCount} / ${lot.totalSlots} Slots Free</span>
+              <span class="font-semibold text-indigo-600">₹${priceRupees}/hr</span>
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+
+        markersRef.current[lot.id] = marker;
+
+        if (isSelected) {
+          marker.openPopup();
+        }
+      } catch (err) {
+        console.warn('Failed to place Leaflet marker:', err);
+      }
+    });
+  }, [lots, selectedLotId, onSelectLot]);
+
+  // Center map on selected lot if set
+  useEffect(() => {
+    if (!mapInstanceRef.current || !selectedLotId) return;
+    const lot = lots.find((l) => l.id === selectedLotId);
+    if (lot) {
+      try {
+        mapInstanceRef.current.setView([lot.latitude, lot.longitude], 15, {
+          animate: true,
+        });
+      } catch {
+        // Ignore
+      }
+    }
+  }, [selectedLotId, lots]);
+
+  return (
+    <div className="relative w-full">
+      {/* Map DOM Container */}
+      <div
+        ref={mapContainerRef}
+        className={className}
+        data-testid="leaflet-map-container"
+        tabIndex={0}
+        aria-label="Interactive parking map of Pune"
+      />
+
+      {/* Accessible DOM Fallback / Screen-reader List of Markers */}
+      <div className="sr-only" aria-live="polite">
+        <h3>Parking Lots Map View</h3>
+        <ul>
+          {lots.map((lot) => {
+            const { label } = getMarkerColor(lot.freeCount, lot.totalSlots);
+            return (
+              <li key={lot.id}>
+                <button onClick={() => onSelectLot(lot)}>
+                  {lot.name}: {lot.freeCount} of {lot.totalSlots} spots free ({label}), ₹
+                  {(lot.pricePerHourPaise / 100).toFixed(0)} per hour.
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {/* Map Legend Overlay */}
+      <div className="absolute bottom-4 left-4 z-[400] bg-white/95 backdrop-blur-xs p-2.5 rounded-xl border border-slate-200 shadow-md text-xs space-y-1.5">
+        <div className="font-semibold text-slate-800 text-[11px] mb-1">
+          Availability Legend:
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+          <span className="text-slate-700 font-medium">&gt; 50% Free (Plenty)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-orange-500 inline-block"></span>
+          <span className="text-slate-700 font-medium">20% &ndash; 50% Free (Filling up)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+          <span className="text-slate-700 font-medium">&lt; 20% Free (Almost full)</span>
+        </div>
+      </div>
+    </div>
+  );
+};
