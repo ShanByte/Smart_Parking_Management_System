@@ -91,6 +91,7 @@ describe('Guard Console UI Suite (Stage 6)', () => {
 
   it('renders error state with retry button on network failure', async () => {
     vi.spyOn(api, 'get').mockRejectedValue({
+      isAxiosError: true,
       response: { data: { message: 'Database unreachable' } },
     });
 
@@ -176,6 +177,7 @@ describe('Guard Console UI Suite (Stage 6)', () => {
     });
 
     vi.spyOn(api, 'post').mockRejectedValue({
+      isAxiosError: true,
       response: {
         status: 404,
         data: { success: false, code: 'NOT_FOUND', message: 'Booking not found' },
@@ -208,6 +210,7 @@ describe('Guard Console UI Suite (Stage 6)', () => {
     });
 
     vi.spyOn(api, 'post').mockRejectedValue({
+      isAxiosError: true,
       response: {
         status: 409,
         data: {
