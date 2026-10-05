@@ -31,9 +31,10 @@ const mockBooking: BookingView = {
 // STUB: replace in Stage 5
 guardRouter.get('/lots/:lotId/board', (req: Request, res: Response) => {
   // STUB: replace in Stage 5
+  const lotId = Array.isArray(req.params.lotId) ? req.params.lotId[0]! : (req.params.lotId ?? 'lot_stub_001');
   const data: GuardBoard = {
     lot: {
-      id: req.params.lotId || 'lot_stub_001',
+      id: lotId,
       name: 'FC Road Smart Parking',
       totalSlots: 50,
     },
@@ -88,8 +89,9 @@ guardRouter.post(
   validate({ body: GuardWalkInRequestSchema }),
   (req: Request, res: Response) => {
     // STUB: replace in Stage 5
+    const slotId = Array.isArray(req.params.slotId) ? req.params.slotId[0]! : (req.params.slotId ?? 'slot_stub_001');
     const data: GuardWalkInResponseData = {
-      slotId: req.params.slotId || 'slot_stub_001',
+      slotId,
       status: req.body.status === 'OCCUPIED' ? SlotStatus.OCCUPIED : SlotStatus.AVAILABLE,
       source: SlotSource.GUARD,
     };

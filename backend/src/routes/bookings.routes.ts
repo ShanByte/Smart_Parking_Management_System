@@ -59,9 +59,10 @@ bookingsRouter.get('/my', (_req: Request, res: Response) => {
 // STUB: replace in Stage 3
 bookingsRouter.delete('/:id', (req: Request, res: Response) => {
   // STUB: replace in Stage 3
+  const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockBooking.id);
   const data: CancelBookingResponseData = {
     ...mockBooking,
-    id: req.params.id || mockBooking.id,
+    id,
     status: BookingStatus.CANCELLED,
   };
   sendSuccess(res, data, 200);

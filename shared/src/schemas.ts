@@ -13,6 +13,7 @@ import {
 // ==============================================================================
 
 export const ErrorCodeSchema = z.nativeEnum(ErrorCode);
+export const PaymentStatusSchema = z.nativeEnum(PaymentStatus);
 
 export const FailureEnvelopeSchema = z.object({
   success: z.literal(false),

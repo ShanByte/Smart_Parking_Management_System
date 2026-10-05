@@ -43,9 +43,10 @@ lotsRouter.get('/', (_req: Request, res: Response) => {
 // STUB: replace in Stage 3
 lotsRouter.get('/:id', (req: Request, res: Response) => {
   // STUB: replace in Stage 3
+  const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockLot.id);
   const data: GetLotResponseData = {
     ...mockLot,
-    id: req.params.id || mockLot.id,
+    id,
   };
   sendSuccess(res, data, 200);
 });
@@ -66,8 +67,9 @@ lotsRouter.get(
 // STUB: replace in Stage 3 (Member 4 provides backend/src/routes/stats.routes.ts)
 lotsRouter.get('/:id/stats', (req: Request, res: Response) => {
   // STUB: replace in Stage 3 when Member 4 delivers stats.routes.ts
+  const parkingLotId = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockLot.id);
   const data: GetStatsResponseData = {
-    parkingLotId: req.params.id || mockLot.id,
+    parkingLotId,
     totalSlots: 50,
     hours: [
       { hourOfDay: 9, averageOccupiedPercent: 45.5, samples: 10 },

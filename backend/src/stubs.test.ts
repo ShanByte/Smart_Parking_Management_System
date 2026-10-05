@@ -26,7 +26,6 @@ import {
   GuardBoardResponseDataSchema,
   GuardCheckInResponseDataSchema,
   GuardWalkInResponseDataSchema,
-  Role,
 } from '@smart-parking/shared';
 
 describe('C7 Endpoint Stubs Contract Parity', () => {
