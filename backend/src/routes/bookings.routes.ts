@@ -11,6 +11,8 @@ import {
 } from '@smart-parking/shared';
 import { holdSlot, cancelBooking } from '../services/reservations.service.js';
 import { prisma } from '../lib/prisma.js';
+import { ForbiddenError, NotFoundError } from '../lib/errors.js';
+import { ErrorCode } from '@smart-parking/shared';
 import type { Booking } from '@prisma/client';
 
 export const bookingsRouter = Router();
@@ -92,6 +94,11 @@ bookingsRouter.delete(
       const booking = await cancelBooking(userId, id);
       sendSuccess(res, formatBookingView(booking), 200);
     } catch (err) {
+      if (err instanceof ForbiddenError) {
+        // Security Rule 6: someone else's booking returns 404 NOT_FOUND, not 403
+        next(new NotFoundError(ErrorCode.NOT_FOUND, 'Booking not found'));
+        return;
+      }
       next(err);
     }
   }

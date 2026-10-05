@@ -38,6 +38,13 @@ import {
   GenerateSlotsRequestSchema,
   GenerateSlotsResponseDataSchema,
   ReleaseSlotResponseDataSchema,
+  BookingViewSchema,
+  UserViewSchema,
+  UpdateUserRoleRequestSchema,
+  CreateDeviceRequestSchema,
+  CreateDeviceResponseDataSchema,
+  DeviceViewSchema,
+  DeleteDeviceResponseDataSchema,
   AdminAuditLogResponseDataSchema,
   GuardBoardResponseDataSchema,
   GuardCheckInRequestSchema,
@@ -371,6 +378,85 @@ registry.registerPath({
     200: {
       description: 'Audit logs',
       content: { 'application/json': { schema: createSuccessEnvelopeSchema(AdminAuditLogResponseDataSchema) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/bookings',
+  summary: 'Fetch admin booking records',
+  request: {
+    query: z.object({
+      status: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Bookings list',
+      content: { 'application/json': { schema: createSuccessEnvelopeSchema(z.array(BookingViewSchema)) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/users',
+  summary: 'Fetch all users',
+  responses: {
+    200: {
+      description: 'Users list',
+      content: { 'application/json': { schema: createSuccessEnvelopeSchema(z.array(UserViewSchema)) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/admin/users/{id}/role',
+  summary: 'Update user role and guard lot assignment',
+  request: { body: { content: { 'application/json': { schema: UpdateUserRoleRequestSchema } } } },
+  responses: {
+    200: {
+      description: 'User role updated',
+      content: { 'application/json': { schema: createSuccessEnvelopeSchema(UserViewSchema) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/devices',
+  summary: 'Fetch all sensor devices',
+  responses: {
+    200: {
+      description: 'Devices list',
+      content: { 'application/json': { schema: createSuccessEnvelopeSchema(z.array(DeviceViewSchema)) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/devices',
+  summary: 'Register a new sensor or simulator device',
+  request: { body: { content: { 'application/json': { schema: CreateDeviceRequestSchema } } } },
+  responses: {
+    201: {
+      description: 'Device registered and raw key issued',
+      content: { 'application/json': { schema: createSuccessEnvelopeSchema(CreateDeviceResponseDataSchema) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/devices/{id}',
+  summary: 'Revoke device credentials',
+  responses: {
+    200: {
+      description: 'Device revoked',
+      content: { 'application/json': { schema: createSuccessEnvelopeSchema(DeleteDeviceResponseDataSchema) } },
     },
   },
 });

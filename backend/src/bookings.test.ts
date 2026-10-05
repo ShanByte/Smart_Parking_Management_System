@@ -183,7 +183,7 @@ describe('Booking Endpoints & Validation Rules (Stage 3 & C3)', () => {
       expect(res.body.data.status).toBe('CANCELLED');
     });
 
-    it('rejects with 403 FORBIDDEN when user does not own the booking', async () => {
+    it('rejects with 404 NOT_FOUND when user does not own the booking (Security Rule 6)', async () => {
       vi.spyOn(reservationsService, 'cancelBooking').mockRejectedValue(
         new ForbiddenError(ErrorCode.FORBIDDEN, 'You are not authorized to cancel this booking')
       );
@@ -192,8 +192,8 @@ describe('Booking Endpoints & Validation Rules (Stage 3 & C3)', () => {
         .delete('/api/v1/bookings/bk_other_user')
         .set('Authorization', `Bearer ${token}`);
 
-      expect(res.status).toBe(403);
-      expect(res.body.code).toBe(ErrorCode.FORBIDDEN);
+      expect(res.status).toBe(404);
+      expect(res.body.code).toBe(ErrorCode.NOT_FOUND);
     });
   });
 });

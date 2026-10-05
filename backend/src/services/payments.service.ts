@@ -148,7 +148,7 @@ export async function processWebhook(
     );
   }
 
-  const webhookSecret = env.RAZORPAY_WEBHOOK_SECRET;
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || env.RAZORPAY_WEBHOOK_SECRET;
   if (!webhookSecret) {
     throw new AppError(
       ErrorCode.INTERNAL_ERROR,
