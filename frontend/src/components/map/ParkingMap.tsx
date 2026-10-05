@@ -22,10 +22,9 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Record<string, L.Marker>>({});
 
+  // Initialize Leaflet Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
-
-    // Check for existing Leaflet container
     if (mapInstanceRef.current) return;
 
     try {
@@ -49,6 +48,15 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
       }).addTo(map);
 
       mapInstanceRef.current = map;
+
+      // Invalidate size on initial load to ensure complete tile rendering
+      setTimeout(() => {
+        try {
+          map.invalidateSize();
+        } catch {
+          // ignore
+        }
+      }, 100);
     } catch (e) {
       console.warn('Leaflet map initialization skipped in test environment', e);
     }
@@ -65,7 +73,39 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
     };
   }, []);
 
-  // Update markers when lots or selection change
+  // Handle Container Resizing and Layout Toggles via ResizeObserver (Leaflet invalidateSize)
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.invalidateSize();
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+    resizeObserver.observe(mapContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  // Invalidate map size when selected lot changes or layout toggles
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      try {
+        mapInstanceRef.current.invalidateSize();
+      } catch {
+        // ignore
+      }
+    }
+  }, [selectedLotId, lots.length]);
+
+  // Update Markers when lots, recommended lot, or selected lot changes
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -81,37 +121,49 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
     markersRef.current = {};
 
     lots.forEach((lot) => {
-      const { color, label } = getMarkerColor(lot.freeCount, lot.totalSlots);
+      const { category, label } = getMarkerColor(lot.freeCount, lot.totalSlots);
       const isSelected = selectedLotId === lot.id;
       const isRecommended = recommendedLotId === lot.id;
       const priceRupees = (lot.pricePerHourPaise / 100).toFixed(0);
 
+      // Category color mapping to avoid forbidden inline styles
+      const categoryBgClass =
+        category === 'green'
+          ? 'bg-emerald-600'
+          : category === 'orange'
+          ? 'bg-orange-500'
+          : 'bg-red-600';
+
+      const categoryTextClass =
+        category === 'green'
+          ? 'text-emerald-700'
+          : category === 'orange'
+          ? 'text-orange-700'
+          : 'text-red-700';
+
+      const ringClass = isSelected
+        ? 'ring-4 ring-indigo-500 scale-110 shadow-lg'
+        : 'hover:scale-105 shadow-md';
+
       // Custom accessible HTML marker with icon and label text
       const iconHtml = `
         <div 
-          class="relative flex flex-col items-center cursor-pointer select-none transition-transform hover:scale-110"
-          style="transform: translate(-50%, -100%);"
+          class="relative flex flex-col items-center cursor-pointer select-none -translate-x-1/2 -translate-y-full"
           aria-label="${lot.name} - ${lot.freeCount} of ${lot.totalSlots} slots available (${label})${isRecommended ? ' - Recommended choice' : ''}"
         >
           <div 
-            class="relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white font-bold text-xs shadow-lg border-2 ${
-              isSelected ? 'ring-4 ring-indigo-500 scale-110' : ''
-            }"
-            style="background-color: ${color}; border-color: #ffffff;"
+            class="relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white font-bold text-xs border-2 border-white ${categoryBgClass} ${ringClass} transition-transform"
           >
             <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
             <span>${lot.freeCount} Free</span>
             ${
               isRecommended
-                ? '<span class="ml-1 px-1.5 py-0.2 bg-amber-400 text-slate-900 rounded-full text-[10px] font-black">★</span>'
+                ? '<span class="ml-1 px-1.5 py-0.2 bg-amber-300 text-slate-900 rounded-full text-[10px] font-black">★</span>'
                 : ''
             }
           </div>
-          <div 
-            class="w-2.5 h-2.5 rotate-45 -mt-1.5 shadow-md"
-            style="background-color: ${color};"
-          ></div>
-          <span class="mt-1 px-2 py-0.5 rounded bg-white/90 text-[10px] font-semibold text-slate-800 shadow-xs border border-slate-200 whitespace-nowrap">
+          <div class="w-2.5 h-2.5 rotate-45 -mt-1.5 shadow-xs ${categoryBgClass}"></div>
+          <span class="mt-1 px-2 py-0.5 rounded bg-white/95 text-[10px] font-semibold text-slate-800 shadow-xs border border-slate-200 whitespace-nowrap">
             ${isRecommended ? '★ ' : ''}${lot.name}
           </span>
         </div>
@@ -138,11 +190,15 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
         // Popup details
         const popupContent = `
           <div class="p-1 space-y-1 text-slate-800 font-sans">
-            ${isRecommended ? '<div class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-full inline-block">★ Best Choice for Arrival</div>' : ''}
-            <h4 class="font-bold text-sm">${lot.name}</h4>
+            ${
+              isRecommended
+                ? '<div class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full inline-block">★ Recommended for Arrival</div>'
+                : ''
+            }
+            <h4 class="font-bold text-sm text-slate-900">${lot.name}</h4>
             <p class="text-xs text-slate-500">${lot.address}</p>
             <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-              <span class="font-bold" style="color: ${color};">${lot.freeCount} / ${lot.totalSlots} Slots Free</span>
+              <span class="font-bold ${categoryTextClass}">${lot.freeCount} / ${lot.totalSlots} Slots Free</span>
               <span class="font-semibold text-indigo-600">₹${priceRupees}/hr</span>
             </div>
           </div>
@@ -205,8 +261,11 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
       </div>
 
       {/* Map Legend Overlay */}
-      <div className="absolute bottom-4 left-4 z-[400] bg-white/95 backdrop-blur-xs p-2.5 rounded-xl border border-slate-200 shadow-md text-xs space-y-1.5">
-        <div className="font-semibold text-slate-800 text-[11px] mb-1">
+      <div
+        aria-label="Map availability legend"
+        className="absolute bottom-4 left-4 z-[400] bg-white/95 backdrop-blur-xs p-3 rounded-xl border border-slate-200/90 shadow-md text-xs space-y-1.5 select-none"
+      >
+        <div className="font-semibold text-slate-800 text-[11px] mb-1 uppercase tracking-wider">
           Availability Legend:
         </div>
         <div className="flex items-center gap-2">

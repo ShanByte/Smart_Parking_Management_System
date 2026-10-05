@@ -5,6 +5,7 @@ import { api } from '../services/api';
 import { ParkingLot, SlotView, Booking } from '../types/contract';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
+import { Skeleton } from '../components/common/Skeleton';
 import { SlotGrid } from '../components/slot/SlotGrid';
 import { TimeWindowSelector, TimeWindow } from '../components/slot/TimeWindowSelector';
 import { BusyChart } from '../features/stats/BusyChart';
@@ -15,7 +16,15 @@ import { useAuthStore } from '../stores/authStore';
 import { useBookingStore } from '../stores/bookingStore';
 import { validateVehicleNumber } from '../schemas/bookingSchemas';
 import { useLotSocket } from '../services/socket';
-import { MapPin, Navigation, ArrowLeft, Clock, Car, AlertCircle } from 'lucide-react';
+import {
+  MapPinIcon,
+  NavigationIcon,
+  ChevronLeftIcon,
+  ClockIcon,
+  CarIcon,
+  AlertCircleIcon,
+  CheckCircleIcon,
+} from '../components/common/icons';
 
 const AvailabilityPatternChart = lazy(
   () => import('../features/stats/AvailabilityPatternChart')
@@ -210,17 +219,18 @@ export const LotDetails: React.FC = () => {
   if (lotLoading) {
     return (
       <div className="space-y-4" role="status" aria-label="Loading lot details">
-        <div className="h-8 bg-slate-200 rounded w-1/4 animate-pulse"></div>
-        <div className="h-64 bg-slate-100 rounded-xl animate-pulse"></div>
+        <Skeleton variant="text" width={240} height={32} />
+        <Skeleton variant="rectangular" width="100%" height={260} className="rounded-2xl" />
       </div>
     );
   }
 
   if (lotError || !lot) {
     return (
-      <div className="text-center py-12">
-        <p className="text-slate-600 font-semibold">Parking lot not found or unavailable.</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>
+      <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
+        <p className="text-slate-700 font-semibold text-lg">Parking lot not found or unavailable.</p>
+        <p className="text-slate-500 text-sm mt-1">Please return to the map to choose an active parking facility.</p>
+        <Button variant="primary" className="mt-5" onClick={() => navigate('/')}>
           Return to Map
         </Button>
       </div>
@@ -230,22 +240,24 @@ export const LotDetails: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header & Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/')}
-            className="p-2"
+            className="p-2 min-h-[40px] min-w-[40px]"
             aria-label="Back to map"
           >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
+            <ChevronLeftIcon className="w-5 h-5 text-slate-700" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{lot.name}</h1>
-            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-              <MapPin className="w-3.5 h-3.5 text-slate-400" />
-              {lot.address}
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              {lot.name}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
+              <MapPinIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+              <span>{lot.address}</span>
             </p>
           </div>
         </div>
@@ -255,8 +267,8 @@ export const LotDetails: React.FC = () => {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Button variant="outline" size="sm">
-            <Navigation className="w-4 h-4 mr-1.5" />
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <NavigationIcon className="w-4 h-4 text-indigo-600" />
             Directions
           </Button>
         </a>
@@ -266,30 +278,37 @@ export const LotDetails: React.FC = () => {
         <div
           role="alert"
           data-testid="hold-error-alert"
-          className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 text-sm"
+          className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-900 text-sm shadow-2xs"
         >
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <AlertCircleIcon className="w-5 h-5 text-red-600 flex-shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {/* Pricing and Stats Bar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4 flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-500">Hourly Rate</span>
-          <span className="text-lg font-bold text-indigo-600">
+        <Card className="p-4 flex items-center justify-between shadow-2xs">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Hourly Rate
+          </span>
+          <span className="text-xl font-bold text-indigo-600 font-mono">
             ₹{(lot.pricePerHourPaise / 100).toFixed(0)} / hr
           </span>
         </Card>
-        <Card className="p-4 flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-500">Free Spots</span>
-          <span className="text-lg font-bold text-emerald-600">
+        <Card className="p-4 flex items-center justify-between shadow-2xs">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Free Spots
+          </span>
+          <span className="text-xl font-bold text-emerald-600 font-mono">
             {lot.freeCount} / {lot.totalSlots}
           </span>
         </Card>
-        <Card className="p-4 flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-500">Operating Status</span>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+        <Card className="p-4 flex items-center justify-between shadow-2xs">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Operating Status
+          </span>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 flex items-center gap-1 border border-emerald-200">
+            <CheckCircleIcon className="w-3 h-3 text-emerald-700" />
             Open 24/7 &bull; Realtime
           </span>
         </Card>
@@ -298,10 +317,13 @@ export const LotDetails: React.FC = () => {
       {/* Estimated Arrival Availability Badge */}
       <AvailabilityBadge
         score={arrivalScore}
-        arrivalTimeLabel={new Date(timeWindow.from).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+        arrivalTimeLabel={new Date(timeWindow.from).toLocaleTimeString([], {
+          hour: 'numeric',
+          minute: '2-digit',
+        })}
       />
 
-      {/* Time Window Selector (React Query dependency) */}
+      {/* Time Window Selector */}
       <TimeWindowSelector
         pricePerHourPaise={lot.pricePerHourPaise}
         onChange={handleTimeWindowChange}
@@ -309,9 +331,9 @@ export const LotDetails: React.FC = () => {
 
       {/* Slot Grid Container */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-slate-900">
+        <h2 className="text-lg font-bold text-slate-900 tracking-tight">
           Slot Availability Grid
-        </h3>
+        </h2>
 
         <SlotGrid
           slots={slots}
@@ -330,12 +352,12 @@ export const LotDetails: React.FC = () => {
             <div>
               <p className="text-sm font-semibold text-slate-900">
                 Selected Slot:{' '}
-                <span className="text-indigo-600 font-extrabold text-lg">
+                <span className="text-indigo-600 font-extrabold text-lg font-mono">
                   {selectedSlotLocal.slotNumber}
                 </span>
               </p>
-              <p className="text-xs text-slate-600 flex items-center gap-1 mt-0.5">
-                <Clock className="w-3.5 h-3.5 text-amber-500" />
+              <p className="text-xs text-slate-600 flex items-center gap-1.5 mt-0.5">
+                <ClockIcon className="w-3.5 h-3.5 text-amber-600" />
                 Reserves a 5-minute hold for {timeWindow.durationHours} hr
                 {timeWindow.durationHours > 1 ? 's' : ''} parking
               </p>
@@ -349,15 +371,15 @@ export const LotDetails: React.FC = () => {
                 onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
                 maxLength={15}
                 aria-label="Vehicle registration number"
-                className="w-full sm:w-56 px-3.5 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase font-mono"
+                className="w-full sm:w-56 px-3.5 py-2.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-600 uppercase font-mono shadow-2xs"
               />
               <Button
                 variant="primary"
                 onClick={handleHoldClick}
                 isLoading={holdSlotMutation.isPending}
-                className="w-full sm:w-auto whitespace-nowrap font-semibold"
+                className="w-full sm:w-auto whitespace-nowrap font-semibold gap-1.5"
               >
-                <Car className="w-4 h-4 mr-1.5" />
+                <CarIcon className="w-4 h-4" />
                 Hold Slot & Proceed
               </Button>
             </div>
