@@ -3,7 +3,7 @@
 # ==============================================================================
 
 # Stage 1: Build stage
-FROM node:22.23.3-alpine3.21 AS builder
+FROM node:22-alpine3.21 AS builder
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN npm run build -w shared && npm run build -w backend
 RUN npm prune --production
 
 # Stage 2: Runtime stage
-FROM node:22.23.3-alpine3.21 AS runner
+FROM node:22-alpine3.21 AS runner
 
 WORKDIR /app
 

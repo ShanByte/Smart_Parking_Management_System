@@ -126,6 +126,9 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate --schema=backend/prisma/schema.prisma
 
+      - name: Build shared workspace
+        run: npm run build -w @smart-parking/shared
+
       - name: Run database migrations
         env:
           DATABASE_URL: postgresql://postgres:test_postgres_password@localhost:5432/smart_parking_test?schema=public
