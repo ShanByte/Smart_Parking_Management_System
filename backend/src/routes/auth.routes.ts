@@ -1,94 +1,146 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { validate } from '../middleware/validate.js';
 import { sendSuccess } from '../lib/respond.js';
+import { env } from '../config/env.js';
 import {
   RegisterRequestSchema,
   LoginRequestSchema,
-  Role,
-  UserView,
-  LoginResponseData,
-  RegisterResponseData,
-  RefreshResponseData,
-  LogoutResponseData,
-  MeResponseData,
+  ErrorCode,
 } from '@smart-parking/shared';
+import {
+  registerUser,
+  loginUser,
+  rotateRefreshToken,
+  logoutUser,
+  getCurrentUser,
+} from '../services/auth.service.js';
+import { requireAuth } from '../middleware/auth.js';
+import { authRateLimiter } from '../middleware/rateLimiter.js';
+import { ValidationError, UnauthorizedError } from '../lib/errors.js';
 
 export const authRouter = Router();
 
-const mockUser: UserView = {
-  id: 'usr_stub_001',
-  name: 'Demo User',
-  email: 'demo@example.com',
-  role: Role.USER,
-  assignedLotId: null,
-  createdAt: '2026-10-05T00:00:00.000Z',
-};
+function getRefreshTokenCookieOptions() {
+  return {
+    httpOnly: true,
+    path: '/api/v1/auth',
+    secure: env.NODE_ENV === 'production',
+    sameSite: env.COOKIE_SAMESITE as 'lax' | 'strict' | 'none',
+    domain: env.COOKIE_DOMAIN,
+    maxAge: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
+  };
+}
 
 // POST /api/v1/auth/register
-// STUB: replace in Stage 2
 authRouter.post(
   '/register',
+  authRateLimiter,
   validate({ body: RegisterRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 2
-    const data: RegisterResponseData = {
-      user: {
-        ...mockUser,
-        name: req.body.name,
-        email: req.body.email,
-      },
-    };
-    sendSuccess(res, data, 201);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { name, email, password } = req.body;
+      const result = await registerUser(name, email, password);
+      sendSuccess(res, result, 201);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // POST /api/v1/auth/login
-// STUB: replace in Stage 2
 authRouter.post(
   '/login',
+  authRateLimiter,
   validate({ body: LoginRequestSchema }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 2
-    const data: LoginResponseData = {
-      accessToken: 'stub.jwt.access.token',
-      expiresInSeconds: 900,
-      user: {
-        ...mockUser,
-        email: req.body.email,
-      },
-    };
-    sendSuccess(res, data, 200);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { email, password } = req.body;
+      const { authData, rawRefreshToken } = await loginUser(email, password);
+
+      res.cookie('refresh_token', rawRefreshToken, getRefreshTokenCookieOptions());
+      sendSuccess(res, authData, 200);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // POST /api/v1/auth/refresh
-// STUB: replace in Stage 2
-authRouter.post('/refresh', (_req: Request, res: Response) => {
-  // STUB: replace in Stage 2
-  const data: RefreshResponseData = {
-    accessToken: 'stub.jwt.access.token.refreshed',
-    expiresInSeconds: 900,
-    user: mockUser,
-  };
-  sendSuccess(res, data, 200);
-});
+authRouter.post(
+  '/refresh',
+  authRateLimiter,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // C5: Require X-Requested-With: XMLHttpRequest
+      const requestedWith = req.headers['x-requested-with'];
+      if (requestedWith !== 'XMLHttpRequest') {
+        throw new ValidationError(
+          ErrorCode.VALIDATION_ERROR,
+          'Missing or invalid X-Requested-With header'
+        );
+      }
+
+      const rawRefreshToken = req.cookies?.refresh_token;
+      if (!rawRefreshToken) {
+        throw new UnauthorizedError(ErrorCode.UNAUTHORIZED, 'No refresh token provided');
+      }
+
+      const { authData, rawRefreshToken: newRawRefreshToken } =
+        await rotateRefreshToken(rawRefreshToken);
+
+      res.cookie('refresh_token', newRawRefreshToken, getRefreshTokenCookieOptions());
+      sendSuccess(res, authData, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // POST /api/v1/auth/logout
-// STUB: replace in Stage 2
-authRouter.post('/logout', (_req: Request, res: Response) => {
-  // STUB: replace in Stage 2
-  const data: LogoutResponseData = {
-    status: 'ok',
-  };
-  sendSuccess(res, data, 200);
-});
+authRouter.post(
+  '/logout',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // C5: Require X-Requested-With: XMLHttpRequest
+      const requestedWith = req.headers['x-requested-with'];
+      if (requestedWith !== 'XMLHttpRequest') {
+        throw new ValidationError(
+          ErrorCode.VALIDATION_ERROR,
+          'Missing or invalid X-Requested-With header'
+        );
+      }
+
+      const rawRefreshToken = req.cookies?.refresh_token;
+      await logoutUser(rawRefreshToken);
+
+      res.clearCookie('refresh_token', {
+        httpOnly: true,
+        path: '/api/v1/auth',
+        secure: env.NODE_ENV === 'production',
+        sameSite: env.COOKIE_SAMESITE as 'lax' | 'strict' | 'none',
+        domain: env.COOKIE_DOMAIN,
+      });
+
+      sendSuccess(res, { status: 'ok' as const }, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // GET /api/v1/auth/me
-// STUB: replace in Stage 2
-authRouter.get('/me', (_req: Request, res: Response) => {
-  // STUB: replace in Stage 2
-  const data: MeResponseData = {
-    user: mockUser,
-  };
-  sendSuccess(res, data, 200);
-});
+authRouter.get(
+  '/me',
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedError(ErrorCode.UNAUTHORIZED, 'Unauthorized');
+      }
+      const user = await getCurrentUser(req.user.userId);
+      sendSuccess(res, { user }, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
