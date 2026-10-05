@@ -25,6 +25,8 @@ describe('Stage 4 Payments Endpoints & Security Rules (C7, C9, Rules 6, 7 & 9)',
     vi.restoreAllMocks();
     mutableEnv.RAZORPAY_KEY_SECRET = testKeySecret;
     mutableEnv.RAZORPAY_WEBHOOK_SECRET = testWebhookSecret;
+    process.env.RAZORPAY_KEY_SECRET = testKeySecret;
+    process.env.RAZORPAY_WEBHOOK_SECRET = testWebhookSecret;
   });
 
   const mockHeldBooking: Booking = {

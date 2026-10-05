@@ -13,6 +13,7 @@ import { paymentsRouter } from './routes/payments.routes.js';
 import { sensorsRouter } from './routes/sensors.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
 import { guardRouter } from './routes/guard.routes.js';
+import { availabilityRouter } from './routes/availability.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -70,6 +71,7 @@ export function createApp(): Express {
   apiV1.use('/sensors', sensorsRouter);
   apiV1.use('/admin', adminRouter);
   apiV1.use('/guard', guardRouter);
+  apiV1.use('/availability', availabilityRouter);
 
   app.use('/api/v1', apiV1);
 

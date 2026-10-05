@@ -54,6 +54,7 @@ import {
   HealthResponseDataSchema,
   ReadyResponseDataSchema,
   createSuccessEnvelopeSchema,
+  ArrivalAvailabilityResponseDataSchema,
 } from '@smart-parking/shared';
 
 extendZodWithOpenApi(z);
@@ -497,6 +498,29 @@ registry.registerPath({
       description: 'Walk-in status updated',
       content: { 'application/json': { schema: createSuccessEnvelopeSchema(GuardWalkInResponseDataSchema) } },
     },
+  },
+});
+
+// Availability
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/availability/arrival',
+  summary: 'Get arrival availability score for parking lots',
+  parameters: [
+    {
+      name: 'arrivalTime',
+      in: 'query',
+      required: true,
+      schema: { type: 'string', format: 'date-time' },
+      description: 'Target arrival time in ISO-8601 UTC format',
+    },
+  ],
+  responses: {
+    200: {
+      description: 'Arrival availability scores returned successfully',
+      content: { 'application/json': { schema: createSuccessEnvelopeSchema(ArrivalAvailabilityResponseDataSchema) } },
+    },
+    400: { description: 'Validation error: invalid arrivalTime format or range' },
   },
 });
 

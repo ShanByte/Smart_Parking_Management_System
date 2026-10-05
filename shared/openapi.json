@@ -2849,6 +2849,154 @@
           }
         }
       }
+    },
+    "/api/v1/availability/arrival": {
+      "get": {
+        "summary": "Get arrival availability score for parking lots",
+        "parameters": [
+          {
+            "name": "arrivalTime",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Target arrival time in ISO-8601 UTC format"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Arrival availability scores returned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "arrivalTime": {
+                          "type": "string"
+                        },
+                        "generatedAt": {
+                          "type": "string"
+                        },
+                        "lots": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "parkingLotId": {
+                                "type": "string"
+                              },
+                              "totalSlots": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "exclusiveMinimum": true
+                              },
+                              "historical": {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "OK",
+                                      "LIMITED_DATA"
+                                    ]
+                                  },
+                                  "basis": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      "SAME_WEEKDAY_HOUR",
+                                      "ALL_DAYS_HOUR"
+                                    ]
+                                  },
+                                  "samples": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "expectedAvailablePercentAtArrival": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "expectedAvailablePercentNow": {
+                                    "type": "number",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "status",
+                                  "basis",
+                                  "samples",
+                                  "expectedAvailablePercentAtArrival",
+                                  "expectedAvailablePercentNow"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "pattern": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "hourOfDay": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 23
+                                    },
+                                    "expectedAvailablePercent": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 100
+                                    }
+                                  },
+                                  "required": [
+                                    "hourOfDay",
+                                    "expectedAvailablePercent"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "parkingLotId",
+                              "totalSlots",
+                              "historical",
+                              "pattern"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "arrivalTime",
+                        "generatedAt",
+                        "lots"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error: invalid arrivalTime format or range"
+          }
+        }
+      }
     }
   }
 }

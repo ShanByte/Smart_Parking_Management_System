@@ -54,3 +54,17 @@ export const guardCheckInRateLimiter = rateLimit({
     code: ErrorCode.RATE_LIMITED,
   },
 });
+
+export const availabilityRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => env.NODE_ENV === 'test' && !req.headers['x-test-rate-limit'],
+  message: {
+    success: false,
+    message: 'Too many availability requests. Please slow down.',
+    code: ErrorCode.RATE_LIMITED,
+  },
+});
+
