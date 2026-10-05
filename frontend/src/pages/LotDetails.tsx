@@ -11,6 +11,7 @@ import { BusyChart } from '../features/stats/BusyChart';
 import { useAuthStore } from '../stores/authStore';
 import { useBookingStore } from '../stores/bookingStore';
 import { validateVehicleNumber } from '../schemas/bookingSchemas';
+import { useLotSocket } from '../services/socket';
 import { MapPin, Navigation, ArrowLeft, Clock, Car, AlertCircle } from 'lucide-react';
 
 export const LotDetails: React.FC = () => {
@@ -23,6 +24,9 @@ export const LotDetails: React.FC = () => {
   const [selectedSlotLocal, setSelectedSlotLocal] = useState<SlotView | null>(null);
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Subscribe to real-time slot and lot updates via WebSocket (C9)
+  useLotSocket(id);
 
   // Time window state for C7 GET /parking-lots/:id/slots?from=&to=
   const [timeWindow, setTimeWindow] = useState<TimeWindow>({

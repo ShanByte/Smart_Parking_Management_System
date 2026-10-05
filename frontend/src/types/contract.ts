@@ -146,6 +146,24 @@ export interface LotUpdatedEvent {
   totalSlots: number;
 }
 
+export interface LotJoinPayload {
+  lotId: string;
+}
+
+export interface LotLeavePayload {
+  lotId: string;
+}
+
+export interface ClientToServerEvents {
+  'lot:join': (payload: LotJoinPayload) => void;
+  'lot:leave': (payload: LotLeavePayload) => void;
+}
+
+export interface ServerToClientEvents {
+  'slot:updated': (payload: SlotUpdatedEvent) => void;
+  'lot:updated': (payload: LotUpdatedEvent) => void;
+}
+
 // C4 HTTP RESPONSE ENVELOPES
 export interface ApiSuccessResponse<T> {
   success: true;

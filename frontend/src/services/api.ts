@@ -143,6 +143,16 @@ async function executeTokenRefresh(): Promise<string | null> {
   }
 }
 
+/**
+ * Perform single-flight token refresh across HTTP and WebSocket clients (Security Rule 7 / C9)
+ */
+export async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = executeTokenRefresh();
+  }
+  return refreshPromise;
+}
+
 // Response Interceptor: 401 single-flight refresh
 interface CustomAxiosRequestConfig extends AxiosRequestConfig {
   _retry?: boolean;

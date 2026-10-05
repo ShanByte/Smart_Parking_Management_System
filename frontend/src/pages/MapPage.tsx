@@ -6,9 +6,13 @@ import { ParkingMap } from '../components/map/ParkingMap';
 import { LotPanel } from '../components/lot/LotPanel';
 import { Button } from '../components/common/Button';
 import { RotateCcw, AlertTriangle } from 'lucide-react';
+import { useLotSocket } from '../services/socket';
 
 export const MapPage: React.FC = () => {
   const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
+
+  // Subscribe to real-time lot updates to update map pins and counts (C9)
+  useLotSocket();
 
   // React Query for live parking lots (per C7)
   const {
