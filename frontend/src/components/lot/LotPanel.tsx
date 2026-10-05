@@ -1,16 +1,32 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ParkingLot } from '../../types/contract';
 import { Card, CardHeader, CardTitle, CardContent } from '../common/Card';
 import { Button } from '../common/Button';
 import { getMarkerColor } from '../../utils/mapUtils';
 import { MapPin, Navigation, Car, ArrowRight, X } from 'lucide-react';
+import { AvailabilityBadge } from './AvailabilityBadge';
+import { AvailabilityHourPatternItem, indiaTimeParts } from '@smart-parking/shared';
+
+// Lazy-load pattern chart to isolate Recharts into its own chunk
+const AvailabilityPatternChart = lazy(
+  () => import('../../features/stats/AvailabilityPatternChart')
+);
 
 export interface LotPanelProps {
   lots: ParkingLot[];
   selectedLot: ParkingLot | null;
   onSelectLot: (lot: ParkingLot | null) => void;
   isLoading?: boolean;
+  arrivalIso?: string;
+  arrivalLabel?: string;
+  scoresByLotId?: Record<string, number | null>;
+  recommendedLotId?: string | null;
+  recommendedReason?: string | null;
+  isAllLimited?: boolean;
+  mostSpacesLotId?: string | null;
+  noEligibleNote?: string | null;
+  patternByLotId?: Record<string, AvailabilityHourPatternItem[]>;
 }
 
 export const LotPanel: React.FC<LotPanelProps> = ({
@@ -18,6 +34,15 @@ export const LotPanel: React.FC<LotPanelProps> = ({
   selectedLot,
   onSelectLot,
   isLoading = false,
+  arrivalIso,
+  arrivalLabel = 'your arrival',
+  scoresByLotId = {},
+  recommendedLotId = null,
+  recommendedReason = null,
+  isAllLimited = false,
+  mostSpacesLotId = null,
+  noEligibleNote = null,
+  patternByLotId = {},
 }) => {
   const navigate = useNavigate();
 
@@ -43,8 +68,29 @@ export const LotPanel: React.FC<LotPanelProps> = ({
     );
   }
 
+  const arrivalDate = arrivalIso ? new Date(arrivalIso) : new Date();
+  const arrivalParts = indiaTimeParts(arrivalDate);
+
+  const handleSelectAndViewSlots = (lotId: string) => {
+    if (arrivalIso) {
+      navigate(`/lots/${lotId}?from=${encodeURIComponent(arrivalIso)}`);
+    } else {
+      navigate(`/lots/${lotId}`);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Calm notice when availability is tight across all lots */}
+      {noEligibleNote && (
+        <div
+          role="note"
+          className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium"
+        >
+          {noEligibleNote}
+        </div>
+      )}
+
       {/* Selected Lot Focused Card */}
       {selectedLot && (
         <Card className="border-2 border-indigo-500 shadow-md bg-indigo-50/20">
@@ -106,11 +152,36 @@ export const LotPanel: React.FC<LotPanelProps> = ({
               </div>
             </div>
 
+            {/* Availability Score Badge */}
+            <AvailabilityBadge
+              score={scoresByLotId[selectedLot.id] ?? null}
+              arrivalTimeLabel={arrivalLabel}
+              isRecommended={selectedLot.id === recommendedLotId}
+              recommendedReason={recommendedReason}
+              isMostSpacesNow={isAllLimited && selectedLot.id === mostSpacesLotId}
+            />
+
+            {/* Lazy-Loaded Pattern Chart */}
+            <Suspense
+              fallback={
+                <div className="h-44 bg-slate-100 rounded-xl animate-pulse flex items-center justify-center text-xs text-slate-400">
+                  Loading pattern chart...
+                </div>
+              }
+            >
+              <AvailabilityPatternChart
+                pattern={patternByLotId[selectedLot.id] || []}
+                arrivalHour={arrivalParts.hourOfDay}
+                lotName={selectedLot.name}
+                isLimitedData={scoresByLotId[selectedLot.id] === null}
+              />
+            </Suspense>
+
             <div className="flex items-center gap-2">
               <Button
                 variant="primary"
                 className="w-full text-xs py-2.5 font-semibold"
-                onClick={() => navigate(`/lots/${selectedLot.id}`)}
+                onClick={() => handleSelectAndViewSlots(selectedLot.id)}
               >
                 <span>Select & View Slots</span>
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
@@ -139,6 +210,9 @@ export const LotPanel: React.FC<LotPanelProps> = ({
           const isSelected = selectedLot?.id === lot.id;
           const { color, label } = getMarkerColor(lot.freeCount, lot.totalSlots);
           const price = (lot.pricePerHourPaise / 100).toFixed(0);
+          const lotScore = scoresByLotId[lot.id] ?? null;
+          const isRecommended = lot.id === recommendedLotId;
+          const isMostSpaces = isAllLimited && lot.id === mostSpacesLotId;
 
           return (
             <div
@@ -152,7 +226,7 @@ export const LotPanel: React.FC<LotPanelProps> = ({
                   onSelectLot(lot);
                 }
               }}
-              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer select-none bg-white ${
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer select-none bg-white space-y-2 ${
                 isSelected
                   ? 'border-indigo-500 ring-2 ring-indigo-400 shadow-sm'
                   : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
@@ -171,7 +245,17 @@ export const LotPanel: React.FC<LotPanelProps> = ({
                 </span>
               </div>
 
-              <div className="flex items-center justify-between text-xs mt-3 pt-2.5 border-t border-slate-100">
+              {/* Arrival Availability Badge for this lot */}
+              <AvailabilityBadge
+                score={lotScore}
+                arrivalTimeLabel={arrivalLabel}
+                isRecommended={isRecommended}
+                recommendedReason={isRecommended ? recommendedReason : null}
+                isMostSpacesNow={isMostSpaces}
+                showFootnote={false}
+              />
+
+              <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
                 <div className="flex items-center gap-2">
                   <span
                     className="w-2.5 h-2.5 rounded-full inline-block"

@@ -8,6 +8,7 @@ export interface ParkingMapProps {
   selectedLotId?: string | null;
   onSelectLot: (lot: ParkingLot) => void;
   className?: string;
+  recommendedLotId?: string | null;
 }
 
 export const ParkingMap: React.FC<ParkingMapProps> = ({
@@ -15,6 +16,7 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
   selectedLotId,
   onSelectLot,
   className = 'h-[500px] w-full rounded-2xl overflow-hidden shadow-sm border border-slate-200',
+  recommendedLotId = null,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -81,6 +83,7 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
     lots.forEach((lot) => {
       const { color, label } = getMarkerColor(lot.freeCount, lot.totalSlots);
       const isSelected = selectedLotId === lot.id;
+      const isRecommended = recommendedLotId === lot.id;
       const priceRupees = (lot.pricePerHourPaise / 100).toFixed(0);
 
       // Custom accessible HTML marker with icon and label text
@@ -88,23 +91,28 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
         <div 
           class="relative flex flex-col items-center cursor-pointer select-none transition-transform hover:scale-110"
           style="transform: translate(-50%, -100%);"
-          aria-label="${lot.name} - ${lot.freeCount} of ${lot.totalSlots} slots available (${label})"
+          aria-label="${lot.name} - ${lot.freeCount} of ${lot.totalSlots} slots available (${label})${isRecommended ? ' - Recommended choice' : ''}"
         >
           <div 
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white font-bold text-xs shadow-lg border-2 ${
+            class="relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white font-bold text-xs shadow-lg border-2 ${
               isSelected ? 'ring-4 ring-indigo-500 scale-110' : ''
             }"
             style="background-color: ${color}; border-color: #ffffff;"
           >
             <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
             <span>${lot.freeCount} Free</span>
+            ${
+              isRecommended
+                ? '<span class="ml-1 px-1.5 py-0.2 bg-amber-400 text-slate-900 rounded-full text-[10px] font-black">★</span>'
+                : ''
+            }
           </div>
           <div 
             class="w-2.5 h-2.5 rotate-45 -mt-1.5 shadow-md"
             style="background-color: ${color};"
           ></div>
           <span class="mt-1 px-2 py-0.5 rounded bg-white/90 text-[10px] font-semibold text-slate-800 shadow-xs border border-slate-200 whitespace-nowrap">
-            ${lot.name}
+            ${isRecommended ? '★ ' : ''}${lot.name}
           </span>
         </div>
       `;
@@ -130,6 +138,7 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
         // Popup details
         const popupContent = `
           <div class="p-1 space-y-1 text-slate-800 font-sans">
+            ${isRecommended ? '<div class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-full inline-block">★ Best Choice for Arrival</div>' : ''}
             <h4 class="font-bold text-sm">${lot.name}</h4>
             <p class="text-xs text-slate-500">${lot.address}</p>
             <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
@@ -149,7 +158,7 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
         console.warn('Failed to place Leaflet marker:', err);
       }
     });
-  }, [lots, selectedLotId, onSelectLot]);
+  }, [lots, selectedLotId, onSelectLot, recommendedLotId]);
 
   // Center map on selected lot if set
   useEffect(() => {

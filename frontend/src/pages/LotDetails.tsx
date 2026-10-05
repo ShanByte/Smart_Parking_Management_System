@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { ParkingLot, SlotView, Booking } from '../types/contract';
@@ -8,11 +8,18 @@ import { Button } from '../components/common/Button';
 import { SlotGrid } from '../components/slot/SlotGrid';
 import { TimeWindowSelector, TimeWindow } from '../components/slot/TimeWindowSelector';
 import { BusyChart } from '../features/stats/BusyChart';
+import { AvailabilityBadge } from '../components/lot/AvailabilityBadge';
+import { useArrivalAvailability } from '../hooks/useArrivalAvailability';
+import { blendArrivalAvailability, indiaTimeParts } from '@smart-parking/shared';
 import { useAuthStore } from '../stores/authStore';
 import { useBookingStore } from '../stores/bookingStore';
 import { validateVehicleNumber } from '../schemas/bookingSchemas';
 import { useLotSocket } from '../services/socket';
 import { MapPin, Navigation, ArrowLeft, Clock, Car, AlertCircle } from 'lucide-react';
+
+const AvailabilityPatternChart = lazy(
+  () => import('../features/stats/AvailabilityPatternChart')
+);
 
 export const LotDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,11 +35,26 @@ export const LotDetails: React.FC = () => {
   // Subscribe to real-time slot and lot updates via WebSocket (C9)
   useLotSocket(id);
 
+  const [searchParams] = useSearchParams();
+  const initialFrom = searchParams.get('from');
+
   // Time window state for C7 GET /parking-lots/:id/slots?from=&to=
-  const [timeWindow, setTimeWindow] = useState<TimeWindow>({
-    from: new Date().toISOString(),
-    to: new Date(Date.now() + 3600 * 1000).toISOString(),
-    durationHours: 1,
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>(() => {
+    if (initialFrom) {
+      const parsed = new Date(initialFrom);
+      if (!isNaN(parsed.getTime())) {
+        return {
+          from: parsed.toISOString(),
+          to: new Date(parsed.getTime() + 3600 * 1000).toISOString(),
+          durationHours: 1,
+        };
+      }
+    }
+    return {
+      from: new Date().toISOString(),
+      to: new Date(Date.now() + 3600 * 1000).toISOString(),
+      durationHours: 1,
+    };
   });
 
   const handleTimeWindowChange = useCallback((tw: TimeWindow) => {
@@ -145,6 +167,32 @@ export const LotDetails: React.FC = () => {
     },
   });
 
+  // 5. Fetch arrival availability for the chosen window's start time
+  const { data: availabilityData } = useArrivalAvailability(timeWindow.from);
+
+  const { arrivalScore, arrivalPattern } = useMemo(() => {
+    if (!lot || !availabilityData?.lots) {
+      return { arrivalScore: null, arrivalPattern: [] };
+    }
+    const apiItem = availabilityData.lots.find((l) => l.parkingLotId === lot.id);
+    if (!apiItem) {
+      return { arrivalScore: null, arrivalPattern: [] };
+    }
+    const currentFreePercent =
+      lot.totalSlots > 0 ? (100 * lot.freeCount) / lot.totalSlots : 0;
+    const score = blendArrivalAvailability(
+      apiItem.historical.expectedAvailablePercentAtArrival,
+      apiItem.historical.expectedAvailablePercentNow,
+      currentFreePercent,
+      new Date(timeWindow.from),
+      new Date()
+    );
+    return {
+      arrivalScore: score,
+      arrivalPattern: apiItem.pattern,
+    };
+  }, [lot, availabilityData, timeWindow.from]);
+
   const handleHoldClick = () => {
     if (!isAuthenticated) {
       navigate('/login', { state: { from: { pathname: `/lots/${id}` } } });
@@ -247,6 +295,12 @@ export const LotDetails: React.FC = () => {
         </Card>
       </div>
 
+      {/* Estimated Arrival Availability Badge */}
+      <AvailabilityBadge
+        score={arrivalScore}
+        arrivalTimeLabel={new Date(timeWindow.from).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+      />
+
       {/* Time Window Selector (React Query dependency) */}
       <TimeWindowSelector
         pricePerHourPaise={lot.pricePerHourPaise}
@@ -310,6 +364,20 @@ export const LotDetails: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Availability Pattern Around Arrival */}
+      {arrivalPattern.length > 0 && (
+        <div className="mt-8">
+          <Suspense fallback={<div className="h-44 bg-slate-100 rounded-xl animate-pulse" />}>
+            <AvailabilityPatternChart
+              pattern={arrivalPattern}
+              arrivalHour={indiaTimeParts(new Date(timeWindow.from)).hourOfDay}
+              lotName={lot.name}
+              isLimitedData={arrivalScore === null}
+            />
+          </Suspense>
+        </div>
+      )}
 
       {/* Occupancy Analytics (BusyChart by Member 4) */}
       <div id="busy-chart-mount-point" className="mt-8">
