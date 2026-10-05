@@ -17,6 +17,8 @@ import {
 } from 'recharts';
 import { z } from 'zod';
 import { api } from '../../services/api';
+import { Button } from '../../components/common/Button';
+import { AlertCircleIcon } from '../../components/common/icons';
 
 export interface BusyChartProps {
   lotId: string;
@@ -69,9 +71,13 @@ export function BusyChart({ lotId }: BusyChartProps): React.JSX.Element {
   // State 1: Loading State
   if (isLoading) {
     return (
-      <div className="busy-chart-container busy-chart-loading" role="status" aria-live="polite">
-        <div className="spinner" aria-hidden="true" />
-        <p>Loading historical busy hours...</p>
+      <div
+        className="busy-chart-container busy-chart-loading bg-white border border-slate-200 rounded-2xl p-6 text-center space-y-3 shadow-sm"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto spinner" aria-hidden="true" />
+        <p className="text-sm font-medium text-slate-500">Loading historical busy hours...</p>
       </div>
     );
   }
@@ -79,14 +85,25 @@ export function BusyChart({ lotId }: BusyChartProps): React.JSX.Element {
   // State 2: Error State
   if (isError) {
     return (
-      <div className="busy-chart-container busy-chart-error" role="alert" aria-live="assertive">
-        <p className="error-title">Unable to load parking busy times.</p>
-        <p className="error-message">
+      <div
+        className="busy-chart-container busy-chart-error bg-red-50 border border-red-200 rounded-2xl p-6 text-center space-y-2 text-red-900 shadow-sm"
+        role="alert"
+        aria-live="assertive"
+      >
+        <AlertCircleIcon className="w-8 h-8 text-red-500 mx-auto" />
+        <p className="error-title text-sm font-bold text-red-950">Unable to load parking busy times.</p>
+        <p className="error-message text-xs text-red-700">
           {error instanceof Error ? error.message : 'An unexpected error occurred.'}
         </p>
-        <button type="button" onClick={() => void refetch()} className="retry-button">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => void refetch()}
+          className="retry-button mt-2 border-red-300 text-red-800 hover:bg-red-100"
+        >
           Try Again
-        </button>
+        </Button>
       </div>
     );
   }
@@ -96,9 +113,13 @@ export function BusyChart({ lotId }: BusyChartProps): React.JSX.Element {
   // State 3: Empty Data State
   if (hours.length === 0) {
     return (
-      <div className="busy-chart-container busy-chart-empty" role="region" aria-label="Busy Times">
-        <h3 className="chart-heading">Popular Times</h3>
-        <p className="empty-message">
+      <div
+        className="busy-chart-container busy-chart-empty bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center shadow-sm"
+        role="region"
+        aria-label="Busy Times"
+      >
+        <h3 className="chart-heading text-sm font-bold text-slate-800">Popular Times</h3>
+        <p className="empty-message text-xs text-slate-500 mt-1">
           No historical occupancy data collected yet for this location.
         </p>
       </div>
@@ -112,12 +133,22 @@ export function BusyChart({ lotId }: BusyChartProps): React.JSX.Element {
   );
 
   return (
-    <section className="busy-chart-container" aria-label="Parking Lot Busy Times">
-      <div className="chart-header">
-        <h3 className="chart-heading">Popular Times & Typical Occupancy</h3>
-        <p className="chart-subtitle">
-          Based on historical sensor data ({data?.totalSlots} total capacity)
-        </p>
+    <section
+      className="busy-chart-container bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4"
+      aria-label="Parking Lot Busy Times"
+    >
+      <div className="chart-header flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-3 border-b border-slate-100">
+        <div>
+          <h3 className="chart-heading text-base font-bold text-slate-900 tracking-tight">
+            Popular Times & Typical Occupancy
+          </h3>
+          <p className="chart-subtitle text-xs text-slate-500 mt-0.5">
+            Based on historical sensor data ({data?.totalSlots} total capacity)
+          </p>
+        </div>
+        <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full w-fit">
+          Peak: {formatHourLabel(peakHour.hourOfDay)} ({peakHour.averageOccupiedPercent}%)
+        </span>
       </div>
 
       {/* Accessible Text Summary for Screen Readers (Accessibility: not color alone) */}

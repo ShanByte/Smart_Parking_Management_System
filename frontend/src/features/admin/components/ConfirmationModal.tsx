@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '../../../components/common/Button';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangleIcon, XIcon } from '../../../components/common/icons';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -34,11 +34,15 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       aria-labelledby="confirm-dialog-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
     >
-      <div className="relative w-full max-w-md bg-white rounded-xl shadow-2xl border-2 border-slate-300 overflow-hidden">
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 bg-slate-100 border-b border-slate-200">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className={`w-5 h-5 ${isDestructive ? 'text-red-600' : 'text-amber-600'}`} />
+        <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+              isDestructive ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+            }`}>
+              <AlertTriangleIcon className={`w-5 h-5 ${isDestructive ? 'text-red-600' : 'text-amber-600'}`} />
+            </div>
             <h2 id="confirm-dialog-title" className="text-base font-bold text-slate-900">
               {title}
             </h2>
@@ -46,24 +50,24 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <button
             onClick={onCancel}
             disabled={isLoading}
-            className="p-1 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-200"
+            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
             aria-label="Close confirmation dialog"
           >
-            <X className="w-5 h-5" />
+            <XIcon className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-5 space-y-4">
+        <div className="p-6 space-y-4">
           <p className="text-sm text-slate-700 leading-relaxed">{message}</p>
 
-          <div className="flex flex-col-reverse sm:flex-row gap-2.5 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
               disabled={isLoading}
               onClick={onCancel}
-              className="h-11 w-full font-bold border-2 border-slate-300 text-slate-700 hover:bg-slate-100"
+              className="h-11 w-full font-bold border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl"
             >
               {cancelLabel}
             </Button>
@@ -72,7 +76,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               disabled={isLoading}
               isLoading={isLoading}
               onClick={onConfirm}
-              className={`h-11 w-full font-bold text-white shadow-sm ${
+              className={`h-11 w-full font-bold text-white shadow-sm rounded-xl ${
                 isDestructive
                   ? 'bg-red-600 hover:bg-red-700 active:bg-red-800'
                   : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800'

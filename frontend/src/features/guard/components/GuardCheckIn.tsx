@@ -3,7 +3,12 @@ import axios from 'axios';
 import { api } from '../../../services/api';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/common/Card';
 import { Button } from '../../../components/common/Button';
-import { CheckCircle2, AlertCircle, Shield, QrCode } from 'lucide-react';
+import {
+  CheckCircleIcon,
+  AlertCircleIcon,
+  ShieldIcon,
+  QrCodeIcon,
+} from '../../../components/common/icons';
 
 interface GuardCheckInProps {
   onCheckInSuccess: () => void;
@@ -83,24 +88,24 @@ export const GuardCheckIn: React.FC<GuardCheckInProps> = ({ onCheckInSuccess }) 
   };
 
   return (
-    <Card className="border-2 border-slate-300 shadow-sm bg-white">
-      <CardHeader className="bg-slate-50 border-b border-slate-200 py-3 px-4">
+    <Card className="border border-slate-200 shadow-sm bg-white rounded-2xl overflow-hidden">
+      <CardHeader className="bg-slate-50 border-b border-slate-200 py-3.5 px-4 sm:px-5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-700 text-white flex items-center justify-center font-bold">
-              <QrCode className="w-4 h-4" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-2xs">
+              <QrCodeIcon className="w-5 h-5 text-white" />
             </div>
             <div>
-              <CardTitle className="text-base font-bold text-slate-900">
+              <CardTitle className="text-base font-bold text-slate-900 tracking-tight">
                 Gate Check-In
               </CardTitle>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-slate-500">
                 Enter driver's 6-character booking code to grant entry
               </p>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-1 text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-1 rounded">
-            <Shield className="w-3.5 h-3.5" />
+          <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+            <ShieldIcon className="w-3.5 h-3.5 text-emerald-600" />
             <span>Driver Privacy Protected</span>
           </div>
         </div>
@@ -126,13 +131,13 @@ export const GuardCheckIn: React.FC<GuardCheckInProps> = ({ onCheckInSuccess }) 
                 onChange={handleInputChange}
                 placeholder="e.g. KP4M9X"
                 aria-label="Booking Code"
-                className="flex-1 px-4 py-3 text-lg font-mono tracking-widest text-center sm:text-left font-bold text-slate-900 bg-slate-50 border-2 border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:bg-white transition-colors"
+                className="flex-1 min-h-[48px] h-12 px-4 text-lg font-mono tracking-widest text-center sm:text-left font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-600 focus:bg-white transition-colors"
               />
               <Button
                 type="submit"
                 disabled={isLoading || bookingCode.length !== 6}
                 isLoading={isLoading}
-                className="h-12 px-6 text-base font-bold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm"
+                className="min-h-[48px] h-12 px-6 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm"
               >
                 Verify & Check In
               </Button>
@@ -143,9 +148,9 @@ export const GuardCheckIn: React.FC<GuardCheckInProps> = ({ onCheckInSuccess }) 
           {successInfo && (
             <div
               role="alert"
-              className="flex items-start gap-3 p-3.5 bg-emerald-50 border-2 border-emerald-500 rounded-lg text-emerald-900"
+              className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 shadow-2xs"
             >
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <CheckCircleIcon className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-bold text-emerald-950">
                   Check-in Confirmed: Code {successInfo.code}
@@ -168,9 +173,9 @@ export const GuardCheckIn: React.FC<GuardCheckInProps> = ({ onCheckInSuccess }) 
           {errorMessage && (
             <div
               role="alert"
-              className="flex items-start gap-3 p-3.5 bg-red-50 border-2 border-red-500 rounded-lg text-red-900"
+              className="flex items-start gap-3 p-4 bg-red-50 border border-red-300 rounded-xl text-red-900 shadow-2xs"
             >
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <AlertCircleIcon className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-bold text-red-950">Check-in Rejected</p>
                 <p className="text-xs text-red-800 mt-0.5">{errorMessage}</p>

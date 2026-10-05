@@ -8,13 +8,13 @@ import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Button } from '../../../components/common/Button';
 import { ConfirmationModal } from './ConfirmationModal';
 import {
-  CalendarCheck,
-  Ban,
-  Car,
-  AlertCircle,
-  X,
-  IndianRupee,
-} from 'lucide-react';
+  CalendarCheckIcon,
+  BanIcon,
+  CarIcon,
+  AlertCircleIcon,
+  XIcon,
+  IndianRupeeIcon,
+} from '../../../components/common/icons';
 
 interface BookingsManagementProps {
   bookings: BookingView[];
@@ -97,14 +97,14 @@ export const BookingsManagement: React.FC<BookingsManagementProps> = ({
       {successMessage && (
         <div
           role="status"
-          className="p-3 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-900 text-xs font-medium flex items-center justify-between"
+          className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 text-xs font-medium flex items-center justify-between"
         >
           <span>{successMessage}</span>
           <button
             onClick={() => setSuccessMessage(null)}
-            className="text-emerald-700 hover:text-emerald-900"
+            className="text-emerald-700 hover:text-emerald-900 p-1"
           >
-            <X className="w-4 h-4" />
+            <XIcon className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -112,17 +112,17 @@ export const BookingsManagement: React.FC<BookingsManagementProps> = ({
       {errorMessage && (
         <div
           role="alert"
-          className="p-3 bg-red-50 border border-red-300 rounded-lg text-red-900 text-xs font-medium flex items-center justify-between"
+          className="p-3 bg-red-50 border border-red-300 rounded-xl text-red-900 text-xs font-medium flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+            <AlertCircleIcon className="w-4 h-4 text-red-600 flex-shrink-0" />
             <span>{errorMessage}</span>
           </div>
           <button
             onClick={() => setErrorMessage(null)}
-            className="text-red-700 hover:text-red-900"
+            className="text-red-700 hover:text-red-900 p-1"
           >
-            <X className="w-4 h-4" />
+            <XIcon className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -134,10 +134,10 @@ export const BookingsManagement: React.FC<BookingsManagementProps> = ({
             key={s.value}
             type="button"
             onClick={() => onChangeStatusFilter(s.value)}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${
+            className={`px-3.5 py-1.5 text-xs font-bold rounded-xl border transition-all ${
               activeStatusFilter === s.value
                 ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100 hover:border-slate-400'
             }`}
           >
             {s.label}
@@ -145,27 +145,27 @@ export const BookingsManagement: React.FC<BookingsManagementProps> = ({
         ))}
       </div>
 
-      {/* Bookings Table */}
+      {/* Bookings Table with Sticky Header */}
       {bookings.length === 0 ? (
-        <Card className="border-2 border-dashed border-slate-300 p-8 text-center bg-slate-50">
-          <CalendarCheck className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+        <Card className="border border-dashed border-slate-300 p-8 text-center bg-slate-50 rounded-2xl">
+          <CalendarCheckIcon className="w-8 h-8 text-slate-400 mx-auto mb-2" />
           <p className="text-sm font-bold text-slate-700">No bookings found</p>
           <p className="text-xs text-slate-500 mt-1">
             No bookings match the status filter "{activeStatusFilter}".
           </p>
         </Card>
       ) : (
-        <div className="overflow-x-auto bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="overflow-x-auto bg-white rounded-2xl border border-slate-200 shadow-sm max-h-[600px] overflow-y-auto">
           <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold tracking-wider text-[11px]">
+            <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold tracking-wider text-[11px] z-10 shadow-sm">
               <tr>
-                <th className="py-3 px-4">Code</th>
-                <th className="py-3 px-4">Slot</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Vehicle</th>
-                <th className="py-3 px-4">Time Window</th>
-                <th className="py-3 px-4">Amount</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-4">Code</th>
+                <th className="py-3.5 px-4">Slot</th>
+                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4">Vehicle</th>
+                <th className="py-3.5 px-4">Time Window</th>
+                <th className="py-3.5 px-4">Amount</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -173,46 +173,46 @@ export const BookingsManagement: React.FC<BookingsManagementProps> = ({
                 const canCancel = b.status === 'CONFIRMED' || b.status === 'HELD';
                 return (
                   <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
                       {b.bookingCode}
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-600">
+                    <td className="py-3.5 px-4 font-mono text-slate-600">
                       {b.slotId}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       <StatusBadge status={b.status as BookingStatus} size="sm" />
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       {b.vehicleNumber ? (
                         <span className="flex items-center gap-1 font-mono font-semibold text-slate-800">
-                          <Car className="w-3.5 h-3.5 text-slate-400" />
+                          <CarIcon className="w-3.5 h-3.5 text-slate-400" />
                           {b.vehicleNumber}
                         </span>
                       ) : (
                         <span className="text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       <div className="flex flex-col text-[11px] text-slate-600">
                         <span>{formatDateTime(b.startTime)}</span>
                         <span className="text-slate-400">to {formatDateTime(b.endTime)}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 font-bold text-slate-900">
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
                       <span className="flex items-center">
-                        <IndianRupee className="w-3 h-3 text-slate-500" />
+                        <IndianRupeeIcon className="w-3 h-3 text-slate-500" />
                         {(b.amountPaise / 100).toFixed(0)}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right">
                       {canCancel && (
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setBookingToCancel(b)}
-                          className="h-8 px-2.5 text-[11px] font-bold border-red-200 text-red-600 hover:bg-red-50"
+                          className="h-8 px-2.5 text-[11px] font-bold border-red-200 text-red-600 hover:bg-red-50 rounded-lg"
                         >
-                          <Ban className="w-3 h-3 mr-1" />
+                          <BanIcon className="w-3 h-3 mr-1" />
                           Cancel
                         </Button>
                       )}

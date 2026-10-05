@@ -18,16 +18,16 @@ import { DevicesManagement } from './components/DevicesManagement';
 import { AuditLogView } from './components/AuditLogView';
 import { Button } from '../../components/common/Button';
 import {
-  LayoutDashboard,
-  Building2,
-  CalendarCheck,
-  Users,
-  Cpu,
-  History,
-  RefreshCw,
-  Shield,
-  AlertTriangle,
-} from 'lucide-react';
+  DashboardIcon,
+  BuildingIcon,
+  CalendarCheckIcon,
+  UsersIcon,
+  CpuIcon,
+  HistoryIcon,
+  RefreshIcon,
+  ShieldIcon,
+  AlertTriangleIcon,
+} from '../../components/common/icons';
 
 type AdminTab = 'overview' | 'lots' | 'bookings' | 'users' | 'devices' | 'audit';
 
@@ -117,12 +117,12 @@ const AdminRoutes: React.FC = () => {
   const totalSlotsCount = lots.reduce((acc, l) => acc + (l.totalSlots || 0), 0);
 
   const navTabs: { id: AdminTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'lots', label: 'Lots & Slots', icon: Building2 },
-    { id: 'bookings', label: 'Bookings', icon: CalendarCheck },
-    { id: 'users', label: 'Users & Roles', icon: Users },
-    { id: 'devices', label: 'Devices', icon: Cpu },
-    { id: 'audit', label: 'Audit Log', icon: History },
+    { id: 'overview', label: 'Overview', icon: DashboardIcon },
+    { id: 'lots', label: 'Lots & Slots', icon: BuildingIcon },
+    { id: 'bookings', label: 'Bookings', icon: CalendarCheckIcon },
+    { id: 'users', label: 'Users & Roles', icon: UsersIcon },
+    { id: 'devices', label: 'Devices', icon: CpuIcon },
+    { id: 'audit', label: 'Audit Log', icon: HistoryIcon },
   ];
 
   const isGlobalLoading =
@@ -131,22 +131,22 @@ const AdminRoutes: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-6">
       {/* Admin Header */}
-      <div className="bg-slate-900 text-white rounded-xl p-4 sm:p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-inner">
-            <Shield className="w-6 h-6" />
+      <div className="bg-slate-900 text-white rounded-2xl p-5 sm:p-6 shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20">
+            <ShieldIcon className="w-6 h-6 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                 Admin Operations Console
               </h1>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                 FULL ACCESS
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
-              Logged in as: <strong className="text-white">{user?.email || 'admin@example.com'}</strong>
+            <p className="text-xs text-slate-400 mt-1">
+              Logged in as: <strong className="text-slate-200">{user?.email || 'admin@example.com'}</strong>
             </p>
           </div>
         </div>
@@ -155,15 +155,15 @@ const AdminRoutes: React.FC = () => {
           type="button"
           variant="outline"
           onClick={handleRefreshAll}
-          className="h-10 px-3 text-xs font-bold border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white"
+          className="h-10 px-4 text-xs font-bold border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white rounded-xl"
         >
-          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+          <RefreshIcon className="w-3.5 h-3.5 mr-2 text-slate-400" />
           Refresh Data
         </Button>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex overflow-x-auto gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
+      <div className="flex overflow-x-auto gap-1.5 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/80">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -172,9 +172,9 @@ const AdminRoutes: React.FC = () => {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap ${
                 isActive
-                  ? 'bg-white text-indigo-700 shadow-sm'
+                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
             >
@@ -190,7 +190,7 @@ const AdminRoutes: React.FC = () => {
         <div
           role="status"
           aria-live="polite"
-          className="p-12 text-center bg-white border-2 border-slate-200 rounded-xl space-y-3"
+          className="p-12 text-center bg-white border border-slate-200 rounded-2xl space-y-3 shadow-sm"
         >
           <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm font-semibold text-slate-700">Loading admin data...</p>
@@ -198,9 +198,9 @@ const AdminRoutes: React.FC = () => {
       ) : isLotsError ? (
         <div
           role="alert"
-          className="p-6 bg-red-50 border-2 border-red-300 rounded-xl text-center space-y-2 text-red-900"
+          className="p-6 bg-red-50 border border-red-200 rounded-2xl text-center space-y-2 text-red-900"
         >
-          <AlertTriangle className="w-8 h-8 text-red-600 mx-auto" />
+          <AlertTriangleIcon className="w-8 h-8 text-red-600 mx-auto" />
           <p className="text-sm font-bold">Failed to load admin resources</p>
           <p className="text-xs text-red-700">
             {axios.isAxiosError(lotsError)
@@ -213,7 +213,7 @@ const AdminRoutes: React.FC = () => {
             type="button"
             variant="outline"
             onClick={handleRefreshAll}
-            className="mt-2 text-xs font-bold border-red-300 text-red-800 hover:bg-red-100"
+            className="mt-2 text-xs font-bold border-red-300 text-red-800 hover:bg-red-100 rounded-xl"
           >
             Retry
           </Button>

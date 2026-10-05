@@ -7,17 +7,17 @@ import { Card } from '../../../components/common/Card';
 import { Button } from '../../../components/common/Button';
 import { ConfirmationModal } from './ConfirmationModal';
 import {
-  Cpu,
-  Plus,
-  Radio,
-  Trash2,
-  Copy,
-  Check,
-  AlertCircle,
-  X,
-  KeyRound,
-  ShieldCheck,
-} from 'lucide-react';
+  CpuIcon,
+  PlusIcon,
+  RadioIcon,
+  Trash2Icon,
+  CopyIcon,
+  CheckIcon,
+  AlertCircleIcon,
+  XIcon,
+  KeyRoundIcon,
+  ShieldCheckIcon,
+} from '../../../components/common/icons';
 
 interface DevicesManagementProps {
   devices: DeviceView[];
@@ -138,9 +138,9 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
             setErrorMessage(null);
             setIsRegisterOpen(true);
           }}
-          className="h-10 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
+          className="h-10 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm"
         >
-          <Plus className="w-3.5 h-3.5 mr-1" />
+          <PlusIcon className="w-3.5 h-3.5 mr-1.5" />
           Register Device
         </Button>
       </div>
@@ -148,14 +148,14 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
       {successMessage && (
         <div
           role="status"
-          className="p-3 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-900 text-xs font-medium flex items-center justify-between"
+          className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 text-xs font-medium flex items-center justify-between"
         >
           <span>{successMessage}</span>
           <button
             onClick={() => setSuccessMessage(null)}
-            className="text-emerald-700 hover:text-emerald-900"
+            className="text-emerald-700 hover:text-emerald-900 p-1"
           >
-            <X className="w-4 h-4" />
+            <XIcon className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -163,17 +163,17 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
       {errorMessage && (
         <div
           role="alert"
-          className="p-3 bg-red-50 border border-red-300 rounded-lg text-red-900 text-xs font-medium flex items-center justify-between"
+          className="p-3 bg-red-50 border border-red-300 rounded-xl text-red-900 text-xs font-medium flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+            <AlertCircleIcon className="w-4 h-4 text-red-600 flex-shrink-0" />
             <span>{errorMessage}</span>
           </div>
           <button
             onClick={() => setErrorMessage(null)}
-            className="text-red-700 hover:text-red-900"
+            className="text-red-700 hover:text-red-900 p-1"
           >
-            <X className="w-4 h-4" />
+            <XIcon className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -182,18 +182,18 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
       {createdKeyInfo && (
         <div
           role="alert"
-          className="p-5 bg-amber-50 border-2 border-amber-400 rounded-xl shadow-md space-y-3"
+          className="p-5 bg-amber-50 border-2 border-amber-400 rounded-2xl shadow-md space-y-3"
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-amber-700" />
+              <KeyRoundIcon className="w-5 h-5 text-amber-700" />
               <h3 className="font-extrabold text-amber-950 text-sm">
                 Device Secret Key Generated: {createdKeyInfo.name}
               </h3>
             </div>
             <button
               onClick={() => setCreatedKeyInfo(null)}
-              className="text-amber-800 hover:text-amber-950 text-xs font-bold"
+              className="text-amber-800 hover:text-amber-950 text-xs font-bold px-2 py-1 rounded hover:bg-amber-100 transition-colors"
             >
               Dismiss
             </button>
@@ -203,7 +203,7 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
             Copy this key now. It is displayed <strong>exactly once</strong> and will never be shown again:
           </p>
 
-          <div className="flex items-center gap-2 p-2.5 bg-white border border-amber-300 rounded-lg">
+          <div className="flex items-center gap-2 p-2.5 bg-white border border-amber-300 rounded-xl">
             <input
               type="text"
               readOnly
@@ -213,15 +213,15 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
             <Button
               type="button"
               onClick={handleCopyKey}
-              className="h-8 px-3 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white flex-shrink-0"
+              className="h-8 px-3 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white flex-shrink-0 rounded-lg"
             >
               {isCopied ? (
                 <>
-                  <Check className="w-3.5 h-3.5 mr-1" /> Copied
+                  <CheckIcon className="w-3.5 h-3.5 mr-1" /> Copied
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5 mr-1" /> Copy Key
+                  <CopyIcon className="w-3.5 h-3.5 mr-1" /> Copy Key
                 </>
               )}
             </Button>
@@ -229,26 +229,26 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
         </div>
       )}
 
-      {/* Devices Table */}
+      {/* Devices Table with Sticky Header */}
       {devices.length === 0 ? (
-        <Card className="border-2 border-dashed border-slate-300 p-8 text-center bg-slate-50">
-          <Cpu className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+        <Card className="border border-dashed border-slate-300 p-8 text-center bg-slate-50 rounded-2xl">
+          <CpuIcon className="w-8 h-8 text-slate-400 mx-auto mb-2" />
           <p className="text-sm font-bold text-slate-700">No devices registered</p>
           <p className="text-xs text-slate-500 mt-1">
             Register hardware gate sensors or simulator devices above.
           </p>
         </Card>
       ) : (
-        <div className="overflow-x-auto bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="overflow-x-auto bg-white rounded-2xl border border-slate-200 shadow-sm max-h-[600px] overflow-y-auto">
           <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold tracking-wider text-[11px]">
+            <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold tracking-wider text-[11px] z-10 shadow-sm">
               <tr>
-                <th className="py-3 px-4">Device Name</th>
-                <th className="py-3 px-4">Kind</th>
-                <th className="py-3 px-4">Associated Lot</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Created</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-4">Device Name</th>
+                <th className="py-3.5 px-4">Kind</th>
+                <th className="py-3.5 px-4">Associated Lot</th>
+                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4">Created</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -258,41 +258,41 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
 
                 return (
                   <tr key={d.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3 px-4 font-bold text-slate-900">
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
                       {d.name}
                     </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-300">
-                        {d.kind === 'SENSOR' ? <Radio className="w-3 h-3 text-purple-600" /> : <Cpu className="w-3 h-3 text-blue-600" />}
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-800 border border-slate-300">
+                        {d.kind === 'SENSOR' ? <RadioIcon className="w-3 h-3 text-purple-600" /> : <CpuIcon className="w-3 h-3 text-blue-600" />}
                         {d.kind}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-slate-600">
+                    <td className="py-3.5 px-4 text-slate-600">
                       {assignedLot?.name || d.parkingLotId || 'Global / Any Lot'}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       {isRevoked ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-800 bg-red-100 px-2 py-0.5 rounded border border-red-300">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-800 bg-red-100 px-2.5 py-0.5 rounded-lg border border-red-300">
                           Revoked
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
-                          <ShieldCheck className="w-3 h-3 text-emerald-600" /> Active
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-lg border border-emerald-300">
+                          <ShieldCheckIcon className="w-3 h-3 text-emerald-600" /> Active
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
                       {new Date(d.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right">
                       {!isRevoked && (
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setDeviceToRevoke(d)}
-                          className="h-8 px-2.5 text-[11px] font-bold border-red-200 text-red-600 hover:bg-red-50"
+                          className="h-8 px-2.5 text-[11px] font-bold border-red-200 text-red-600 hover:bg-red-50 rounded-lg"
                         >
-                          <Trash2 className="w-3 h-3 mr-1" />
+                          <Trash2Icon className="w-3 h-3 mr-1" />
                           Revoke
                         </Button>
                       )}
@@ -312,19 +312,20 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         >
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border-2 border-slate-300 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 bg-slate-100 border-b border-slate-200">
-              <h3 className="font-bold text-slate-900">Register Device</h3>
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm">Register Device</h3>
               <button
                 onClick={() => setIsRegisterOpen(false)}
-                className="p-1 text-slate-500 hover:text-slate-800"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                aria-label="Close dialog"
               >
-                <X className="w-5 h-5" />
+                <XIcon className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleRegisterDevice} className="p-5 space-y-4">
+            <form onSubmit={handleRegisterDevice} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
                   Device Name
                 </label>
                 <input
@@ -333,18 +334,18 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
                   placeholder="e.g. Entry Gate Camera 1"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
                   Device Kind
                 </label>
                 <select
                   value={kind}
                   onChange={(e) => setKind(e.target.value as SlotSource)}
-                  className="w-full px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 font-semibold"
+                  className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold"
                 >
                   <option value="SENSOR">SENSOR (Physical Camera / Ultrasonic)</option>
                   <option value="SIM">SIM (Synthetic Traffic Simulator)</option>
@@ -352,13 +353,13 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
                   Assigned Lot (Optional)
                 </label>
                 <select
                   value={lotId}
                   onChange={(e) => setLotId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+                  className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="">Global / Unrestricted</option>
                   {lots.map((l) => (
@@ -369,12 +370,12 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
                 </select>
               </div>
 
-              <div className="flex gap-2.5 pt-2">
+              <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsRegisterOpen(false)}
-                  className="w-full"
+                  className="w-full rounded-xl"
                 >
                   Cancel
                 </Button>
@@ -383,7 +384,7 @@ export const DevicesManagement: React.FC<DevicesManagementProps> = ({
                   disabled={isLoading}
                   isLoading={isLoading}
                   onClick={handleRegisterDevice}
-                  className="w-full bg-indigo-600 text-white font-bold"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl"
                 >
                   Issue Key
                 </Button>

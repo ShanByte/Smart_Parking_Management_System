@@ -6,15 +6,15 @@ import { UserView } from '../types';
 import { Card } from '../../../components/common/Card';
 import { Button } from '../../../components/common/Button';
 import {
-  Users,
-  Shield,
-  UserCheck,
-  User,
-  AlertCircle,
-  X,
-  MapPin,
-  Edit2,
-} from 'lucide-react';
+  UsersIcon,
+  ShieldIcon,
+  UserCheckIcon,
+  UserIcon,
+  AlertCircleIcon,
+  XIcon,
+  MapPinIcon,
+  Edit2Icon,
+} from '../../../components/common/icons';
 
 interface UsersManagementProps {
   users: UserView[];
@@ -82,21 +82,21 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({
     switch (role) {
       case 'ADMIN':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-900 bg-red-100 border border-red-300 px-2 py-0.5 rounded">
-            <Shield className="w-3 h-3 text-red-700" /> Admin
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-red-900 bg-red-100 border border-red-300 px-2.5 py-0.5 rounded-lg">
+            <ShieldIcon className="w-3.5 h-3.5 text-red-700" /> Admin
           </span>
         );
       case 'GUARD':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-900 bg-indigo-100 border border-indigo-300 px-2 py-0.5 rounded">
-            <UserCheck className="w-3 h-3 text-indigo-700" /> Guard
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-900 bg-indigo-100 border border-indigo-300 px-2.5 py-0.5 rounded-lg">
+            <UserCheckIcon className="w-3.5 h-3.5 text-indigo-700" /> Guard
           </span>
         );
       case 'USER':
       default:
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-800 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded">
-            <User className="w-3 h-3 text-slate-600" /> Driver
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-800 bg-slate-100 border border-slate-300 px-2.5 py-0.5 rounded-lg">
+            <UserIcon className="w-3.5 h-3.5 text-slate-600" /> Driver
           </span>
         );
     }
@@ -118,14 +118,14 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({
       {successMessage && (
         <div
           role="status"
-          className="p-3 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-900 text-xs font-medium flex items-center justify-between"
+          className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 text-xs font-medium flex items-center justify-between"
         >
           <span>{successMessage}</span>
           <button
             onClick={() => setSuccessMessage(null)}
-            className="text-emerald-700 hover:text-emerald-900"
+            className="text-emerald-700 hover:text-emerald-900 p-1"
           >
-            <X className="w-4 h-4" />
+            <XIcon className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -133,37 +133,37 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({
       {errorMessage && (
         <div
           role="alert"
-          className="p-3 bg-red-50 border border-red-300 rounded-lg text-red-900 text-xs font-medium flex items-center justify-between"
+          className="p-3 bg-red-50 border border-red-300 rounded-xl text-red-900 text-xs font-medium flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+            <AlertCircleIcon className="w-4 h-4 text-red-600 flex-shrink-0" />
             <span>{errorMessage}</span>
           </div>
           <button
             onClick={() => setErrorMessage(null)}
-            className="text-red-700 hover:text-red-900"
+            className="text-red-700 hover:text-red-900 p-1"
           >
-            <X className="w-4 h-4" />
+            <XIcon className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Users Table */}
+      {/* Users Table with Sticky Header */}
       {users.length === 0 ? (
-        <Card className="border-2 border-dashed border-slate-300 p-8 text-center bg-slate-50">
-          <Users className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+        <Card className="border border-dashed border-slate-300 p-8 text-center bg-slate-50 rounded-2xl">
+          <UsersIcon className="w-8 h-8 text-slate-400 mx-auto mb-2" />
           <p className="text-sm font-bold text-slate-700">No users found</p>
         </Card>
       ) : (
-        <div className="overflow-x-auto bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="overflow-x-auto bg-white rounded-2xl border border-slate-200 shadow-sm max-h-[600px] overflow-y-auto">
           <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold tracking-wider text-[11px]">
+            <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold tracking-wider text-[11px] z-10 shadow-sm">
               <tr>
-                <th className="py-3 px-4">User</th>
-                <th className="py-3 px-4">Email</th>
-                <th className="py-3 px-4">Role</th>
-                <th className="py-3 px-4">Assigned Lot</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-4">User</th>
+                <th className="py-3.5 px-4">Email</th>
+                <th className="py-3.5 px-4">Role</th>
+                <th className="py-3.5 px-4">Assigned Lot</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -171,20 +171,20 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({
                 const assignedLot = lots.find((l) => l.id === u.assignedLotId);
                 return (
                   <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3 px-4 font-bold text-slate-900">
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
                       {u.name}
                     </td>
-                    <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
                       {u.email}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       {getRoleBadge(u.role)}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       {u.role === 'GUARD' ? (
                         u.assignedLotId ? (
                           <span className="flex items-center gap-1 font-semibold text-slate-800">
-                            <MapPin className="w-3.5 h-3.5 text-indigo-600" />
+                            <MapPinIcon className="w-3.5 h-3.5 text-indigo-600" />
                             {assignedLot?.name || u.assignedLotId}
                           </span>
                         ) : (
@@ -196,14 +196,14 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({
                         <span className="text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => openRoleModal(u)}
-                        className="h-8 px-2.5 text-[11px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100"
+                        className="h-8 px-2.5 text-[11px] font-bold border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg"
                       >
-                        <Edit2 className="w-3 h-3 mr-1" />
+                        <Edit2Icon className="w-3 h-3 mr-1" />
                         Change Role
                       </Button>
                     </td>
@@ -222,27 +222,28 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         >
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border-2 border-slate-300 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 bg-slate-100 border-b border-slate-200">
-              <h3 className="font-bold text-slate-900">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm">
                 Update Role: {selectedUser.name}
               </h3>
               <button
                 onClick={() => setSelectedUser(null)}
-                className="p-1 text-slate-500 hover:text-slate-800"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                aria-label="Close dialog"
               >
-                <X className="w-5 h-5" />
+                <XIcon className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleUpdateRole} className="p-5 space-y-4">
+            <form onSubmit={handleUpdateRole} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
                   Select Role
                 </label>
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as Role)}
-                  className="w-full px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 font-semibold"
+                  className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-semibold"
                 >
                   <option value="USER">USER (Customer / Driver)</option>
                   <option value="GUARD">GUARD (Gate Operator)</option>
@@ -252,7 +253,7 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({
 
               {/* Guard Assignment Field (Strict requirement when role is GUARD) */}
               {newRole === 'GUARD' && (
-                <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-lg space-y-1.5">
+                <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1.5">
                   <label className="block text-xs font-bold text-indigo-900 uppercase">
                     Assigned Parking Lot *
                   </label>
@@ -260,7 +261,7 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({
                     required
                     value={assignedLotId}
                     onChange={(e) => setAssignedLotId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border-2 border-indigo-300 bg-white rounded-lg focus:outline-none focus:border-indigo-600 font-medium"
+                    className="w-full px-3 py-2 text-sm border border-indigo-300 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                   >
                     <option value="" disabled>Select a parking lot...</option>
                     {lots.map((l) => (
@@ -275,12 +276,12 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({
                 </div>
               )}
 
-              <div className="flex gap-2.5 pt-2">
+              <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setSelectedUser(null)}
-                  className="w-full"
+                  className="w-full rounded-xl"
                 >
                   Cancel
                 </Button>
@@ -288,7 +289,7 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({
                   type="submit"
                   disabled={isLoading}
                   isLoading={isLoading}
-                  className="w-full bg-indigo-600 text-white font-bold"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl"
                 >
                   Save Role
                 </Button>

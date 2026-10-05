@@ -11,13 +11,13 @@ import { WalkInModal } from './components/WalkInModal';
 import { Card, CardContent } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import {
-  Shield,
-  Radio,
-  RefreshCw,
-  Building,
-  AlertTriangle,
-  MapPin,
-} from 'lucide-react';
+  ShieldIcon,
+  RadioIcon,
+  RefreshIcon,
+  BuildingIcon,
+  AlertCircleIcon,
+  MapPinIcon,
+} from '../../components/common/icons';
 import { z } from 'zod';
 
 // GuardBoard validation schema matching Frozen Contract
@@ -103,9 +103,9 @@ const GuardRoutes: React.FC = () => {
   if (user?.role === 'GUARD' && !user?.assignedLotId) {
     return (
       <div className="max-w-2xl mx-auto p-6 space-y-4">
-        <Card className="border-2 border-amber-300 bg-amber-50 shadow-md">
+        <Card className="border-2 border-amber-300 bg-amber-50 shadow-md rounded-2xl">
           <CardContent className="p-6 text-center space-y-3">
-            <AlertTriangle className="w-12 h-12 text-amber-600 mx-auto" />
+            <AlertCircleIcon className="w-12 h-12 text-amber-600 mx-auto" />
             <h2 className="text-xl font-bold text-amber-950">
               No Parking Lot Assigned
             </h2>
@@ -122,10 +122,10 @@ const GuardRoutes: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-6">
       {/* Top Header Bar */}
-      <div className="bg-slate-900 text-white rounded-xl p-4 sm:p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-800">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-inner">
-            <Shield className="w-6 h-6" />
+            <ShieldIcon className="w-6 h-6 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -133,18 +133,18 @@ const GuardRoutes: React.FC = () => {
                 {guardBoard?.lot?.name || 'Gate Operator Console'}
               </h1>
               <span
-                className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
                   isConnected
                     ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                     : 'bg-red-500/20 text-red-300 border-red-500/40'
                 }`}
               >
-                <Radio className={`w-3 h-3 ${isConnected ? 'animate-pulse text-emerald-400' : 'text-red-400'}`} />
+                <RadioIcon className={`w-3 h-3 ${isConnected ? 'animate-pulse text-emerald-400' : 'text-red-400'}`} />
                 {isConnected ? 'LIVE' : 'OFFLINE'}
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-indigo-400" />
+            <p className="text-xs text-slate-300 mt-0.5 flex items-center gap-1.5 font-medium">
+              <MapPinIcon className="w-3.5 h-3.5 text-indigo-400" />
               <span>Lot ID: {activeLotId}</span>
               {guardBoard?.lot?.totalSlots && (
                 <span>• {guardBoard.lot.totalSlots} Total Slots</span>
@@ -156,15 +156,15 @@ const GuardRoutes: React.FC = () => {
         {/* Header Controls */}
         <div className="flex items-center gap-2.5">
           {user?.role === 'ADMIN' && (
-            <div className="flex items-center gap-1.5 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
-              <Building className="w-4 h-4 text-slate-400 ml-1" />
+            <div className="flex items-center gap-1.5 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+              <BuildingIcon className="w-4 h-4 text-slate-400 ml-1" />
               <input
                 type="text"
                 value={selectedLotId}
                 onChange={(e) => setSelectedLotId(e.target.value)}
                 placeholder="Lot ID"
                 aria-label="Active Lot ID"
-                className="w-24 px-2 py-1 text-xs font-mono bg-slate-900 border border-slate-700 rounded text-white"
+                className="w-24 px-2.5 py-1 text-xs font-mono bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
           )}
@@ -174,9 +174,9 @@ const GuardRoutes: React.FC = () => {
             variant="outline"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="h-10 px-3 text-xs font-bold border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white"
+            className="min-h-[48px] h-12 px-4 text-xs font-bold border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white rounded-xl"
           >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <RefreshIcon className={`w-4 h-4 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
@@ -188,10 +188,10 @@ const GuardRoutes: React.FC = () => {
       {/* Main Board Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-extrabold text-slate-900">
+          <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
             Real-Time Gate Board
           </h2>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs font-medium text-slate-500">
             Tap an available slot to register a walk-in car
           </span>
         </div>
@@ -200,7 +200,7 @@ const GuardRoutes: React.FC = () => {
           <div
             role="status"
             aria-live="polite"
-            className="p-12 text-center bg-white border-2 border-slate-200 rounded-xl space-y-3"
+            className="p-12 text-center bg-white border border-slate-200 rounded-2xl space-y-3 shadow-sm"
           >
             <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-sm font-semibold text-slate-700">Loading gate board slots...</p>
@@ -208,10 +208,10 @@ const GuardRoutes: React.FC = () => {
         ) : isError ? (
           <div
             role="alert"
-            className="p-6 bg-red-50 border-2 border-red-300 rounded-xl text-center space-y-2 text-red-900"
+            className="p-6 bg-red-50 border border-red-300 rounded-2xl text-center space-y-2 text-red-900 shadow-sm"
           >
-            <AlertTriangle className="w-8 h-8 text-red-600 mx-auto" />
-            <p className="text-sm font-bold">Failed to load guard board</p>
+            <AlertCircleIcon className="w-8 h-8 text-red-600 mx-auto" />
+            <p className="text-sm font-bold text-red-950">Failed to load guard board</p>
             <p className="text-xs text-red-700">
               {axios.isAxiosError(error)
                 ? (error.response?.data as { message?: string })?.message || error.message
@@ -223,7 +223,7 @@ const GuardRoutes: React.FC = () => {
               type="button"
               variant="outline"
               onClick={() => refetch()}
-              className="mt-2 text-xs font-bold border-red-300 text-red-800 hover:bg-red-100"
+              className="mt-2 text-xs font-bold border-red-300 text-red-800 hover:bg-red-100 min-h-[48px] h-12 px-6 rounded-xl"
             >
               Retry
             </Button>
