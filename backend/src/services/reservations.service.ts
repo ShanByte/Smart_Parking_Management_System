@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 
 const BOOKING_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MAX_TRANSACTION_RETRIES = 5;
+const CURRENT_WINDOW_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour arrival window
 
 /**
  * Generates a 6-character random booking code from the FROZEN CONTRACT C3 alphabet.
@@ -181,7 +182,7 @@ export async function holdSlot(
           );
         }
         const currentTime = new Date();
-        const isCurrentWindow = startTime <= new Date(currentTime.getTime() + 5 * 60 * 1000);
+        const isCurrentWindow = startTime <= new Date(currentTime.getTime() + CURRENT_WINDOW_THRESHOLD_MS);
 
         // For immediate / current window reservations, the physical slot must be AVAILABLE right now.
         // For non-overlapping future reservations, current physical occupancy does not block booking.
@@ -402,7 +403,7 @@ export async function confirmBooking(
         });
 
         // Update slot to RESERVED if the booking is currently active or starting soon
-        const isCurrentOrSoon = reloadedBooking.startTime <= new Date(Date.now() + 15 * 60 * 1000);
+        const isCurrentOrSoon = reloadedBooking.startTime <= new Date(Date.now() + CURRENT_WINDOW_THRESHOLD_MS);
         if (isCurrentOrSoon) {
           await tx.parkingSlot.update({
             where: { id: existing.slotId },
