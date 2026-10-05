@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
 import { AppError } from '../lib/errors.js';
 import { sendFailure } from '../lib/respond.js';
 import { ErrorCode } from '@smart-parking/shared';
@@ -15,6 +16,17 @@ export function errorHandler(
   if (err instanceof AppError) {
     logger.warn({ err, requestId, path: req.path }, err.message);
     sendFailure(res, err.message, err.code, err.statusCode, requestId);
+    return;
+  }
+
+  // Map ZodError to HTTP 400 with code: VALIDATION_ERROR
+  if (err instanceof ZodError || err.name === 'ZodError') {
+    const zodErr = err as ZodError;
+    const message = zodErr.issues
+      ? zodErr.issues.map((i) => `${i.path.join('.') || 'root'}: ${i.message}`).join('; ')
+      : err.message;
+    logger.warn({ err, requestId, path: req.path }, message);
+    sendFailure(res, message, ErrorCode.VALIDATION_ERROR, 400, requestId);
     return;
   }
 
