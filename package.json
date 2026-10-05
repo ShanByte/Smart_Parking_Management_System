@@ -15,7 +15,15 @@
     "typecheck": "node -e \"const fs=require('fs');const ws=['shared','backend','frontend','simulator'].filter(d=>fs.existsSync(d+'/package.json'));if(ws.length)require('child_process').execSync('npm run typecheck -w shared --if-present && npm run typecheck --workspaces --if-present',{stdio:'inherit'});else console.log('tsconfig.base.json valid; no workspaces to typecheck yet.');\"",
     "test": "node -e \"const fs=require('fs');const ws=['shared','backend','frontend','simulator'].filter(d=>fs.existsSync(d+'/package.json'));if(ws.length)require('child_process').execSync('npm run test --workspaces --if-present',{stdio:'inherit'});else console.log('No workspace tests to run yet.');\"",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "demo:up": "docker compose up postgres redis -d --wait && npx prisma migrate deploy --schema=backend/prisma/schema.prisma && npx tsx backend/prisma/seed.ts",
+    "demo:down": "docker compose down",
+    "demo:api": "npm run dev --workspace=@smart-parking/backend",
+    "demo:simulator": "npm run dev --workspace=@smart-parking/simulator",
+    "qa:concurrency": "npx tsx qa/concurrency.ts",
+    "qa:contract": "npx vitest run qa/contract.test.ts",
+    "qa:load": "k6 run qa/k6-load.js",
+    "qa:chaos": "npx tsx qa/chaos.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
