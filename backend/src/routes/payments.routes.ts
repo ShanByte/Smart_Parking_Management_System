@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { paymentsRateLimiter } from '../middleware/rateLimiter.js';
 import { sendSuccess } from '../lib/respond.js';
 import { env } from '../config/env.js';
+import { NotFoundError } from '../lib/errors.js';
 import {
   CreatePaymentOrderRequestSchema,
   VerifyPaymentRequestSchema,
@@ -12,6 +13,7 @@ import {
   BookingStatus,
   BookingView,
   Role,
+  ErrorCode,
 } from '@smart-parking/shared';
 import {
   createOrder,
@@ -115,10 +117,9 @@ paymentsRouter.post(
 // POST /api/v1/payments/demo-confirm (exists only when DEMO_PAY_ENABLED=true)
 paymentsRouter.post(
   '/demo-confirm',
-  (req: Request, _res: Response, next: NextFunction) => {
+  (_req: Request, _res: Response, next: NextFunction) => {
     if (!env.DEMO_PAY_ENABLED) {
-      // Route is absent when disabled -> falls through to 404
-      return next();
+      throw new NotFoundError(ErrorCode.NOT_FOUND, 'Route not found');
     }
     next();
   },
