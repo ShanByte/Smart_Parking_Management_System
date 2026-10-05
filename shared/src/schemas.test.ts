@@ -117,6 +117,24 @@ describe('Zod Validation Schemas', () => {
       expect(result.success).toBe(false);
     });
 
+    it('rejects booking duration shorter than 15 minutes', () => {
+      const result = CreateBookingRequestSchema.safeParse({
+        slotId: 'slot-123',
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-05T10:10:00.000Z', // 10 minutes
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects booking duration longer than 24 hours', () => {
+      const result = CreateBookingRequestSchema.safeParse({
+        slotId: 'slot-123',
+        startTime: '2026-10-05T10:00:00.000Z',
+        endTime: '2026-10-06T11:00:00.000Z', // 25 hours
+      });
+      expect(result.success).toBe(false);
+    });
+
     it('validates idempotency-key header length between 8 and 64 characters', () => {
       expect(CreateBookingHeadersSchema.safeParse({ 'idempotency-key': '12345678' }).success).toBe(true);
       expect(CreateBookingHeadersSchema.safeParse({ 'idempotency-key': 'short' }).success).toBe(false);

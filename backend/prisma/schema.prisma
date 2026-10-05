@@ -1,0 +1,222 @@
+// ==============================================================================
+// Prisma Schema for Smart Parking Management System (Member 2)
+// Strictly follows FROZEN CONTRACT C2, C3 and Amendment F1
+// ==============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ------------------------------------------------------------------------------
+// Enums per C2
+// ------------------------------------------------------------------------------
+
+enum Role {
+  USER
+  ADMIN
+  GUARD
+}
+
+enum SlotStatus {
+  AVAILABLE
+  HELD
+  RESERVED
+  OCCUPIED
+}
+
+enum BookingStatus {
+  HELD
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+  COMPLETED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  CREATED
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum SlotSource {
+  SIM
+  SENSOR
+  APP
+  GUARD
+}
+
+// ------------------------------------------------------------------------------
+// Ten Models per C3 & Amendment F1
+// ------------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          Role      @default(USER)
+  assignedLotId String?
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+
+  assignedLot   ParkingLot?   @relation("GuardAssignedLot", fields: [assignedLotId], references: [id], onDelete: SetNull)
+  bookings      Booking[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]    @relation("UserAuditLogs")
+
+  @@index([role])
+}
+
+model ParkingLot {
+  id                 String            @id @default(cuid())
+  name               String
+  address            String
+  latitude           Float
+  longitude          Float
+  totalSlots         Int
+  pricePerHourPaise  Int
+  isActive           Boolean           @default(true)
+
+  slots              ParkingSlot[]
+  guards             User[]            @relation("GuardAssignedLot")
+  devices            Device[]
+  occupancyRecords   OccupancyRecord[]
+
+  @@index([isActive])
+}
+
+model ParkingSlot {
+  id              String      @id @default(cuid())
+  parkingLotId    String
+  slotNumber      String
+  status          SlotStatus  @default(AVAILABLE)
+  source          SlotSource  @default(APP)
+  heldUntil       DateTime?   @db.Timestamptz(3)
+  statusUpdatedAt DateTime    @default(now()) @db.Timestamptz(3)
+
+  parkingLot      ParkingLot  @relation(fields: [parkingLotId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+
+  @@unique([parkingLotId, slotNumber])
+  @@index([parkingLotId, status])
+  @@index([status])
+}
+
+model Booking {
+  id             String        @id @default(cuid())
+  userId         String
+  slotId         String
+  status         BookingStatus
+  startTime      DateTime      @db.Timestamptz(3)
+  endTime        DateTime      @db.Timestamptz(3)
+  amountPaise    Int
+  heldUntil      DateTime?     @db.Timestamptz(3)
+  idempotencyKey String
+  bookingCode    String        @unique
+  vehicleNumber  String?
+  checkedInAt    DateTime?     @db.Timestamptz(3)
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slot           ParkingSlot   @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  payments       Payment[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([slotId, status])
+  @@index([userId])
+  @@index([status])
+  @@index([bookingCode])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  bookingId         String
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?
+  amountPaise       Int
+  paymentStatus     PaymentStatus
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+
+  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model OccupancyRecord {
+  id             String      @id @default(cuid())
+  parkingLotId   String
+  hourStart      DateTime    @db.Timestamptz(3)
+  hourOfDay      Int
+  dayOfWeek      Int
+  occupiedCount  Int
+  availableCount Int
+  totalSlots     Int
+  createdAt      DateTime    @default(now()) @db.Timestamptz(3)
+
+  parkingLot     ParkingLot  @relation(fields: [parkingLotId], references: [id], onDelete: Cascade)
+
+  @@unique([parkingLotId, hourStart])
+  @@index([parkingLotId, hourOfDay])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime  @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model Device {
+  id           String      @id @default(cuid())
+  name         String
+  kind         SlotSource
+  parkingLotId String?
+  keyHash      String      @unique
+  isActive     Boolean     @default(true)
+  revokedAt    DateTime?   @db.Timestamptz(3)
+  createdAt    DateTime    @default(now()) @db.Timestamptz(3)
+
+  parkingLot   ParkingLot? @relation(fields: [parkingLotId], references: [id], onDelete: SetNull)
+
+  @@index([parkingLotId])
+}
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  eventId     String    @unique
+  type        String
+  receivedAt  DateTime  @default(now()) @db.Timestamptz(3)
+  processedAt DateTime? @db.Timestamptz(3)
+
+  @@index([type])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String
+  targetType String
+  targetId   String
+  details    Json
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  admin      User     @relation("UserAuditLogs", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([action])
+  @@index([targetType, targetId])
+}

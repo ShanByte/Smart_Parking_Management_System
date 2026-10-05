@@ -120,9 +120,10 @@ adminRouter.put(
 // STUB: replace in Stage 5
 adminRouter.delete('/lots/:id', (req: Request, res: Response) => {
   // STUB: replace in Stage 5
+  const lotId = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockLot.id);
   const data: DeleteLotResponseData = {
     deactivated: true,
-    lotId: req.params.id || mockLot.id,
+    lotId,
   };
   sendSuccess(res, data, 200);
 });
@@ -149,9 +150,10 @@ adminRouter.post(
 // STUB: replace in Stage 5
 adminRouter.put('/slots/:id/release', (req: Request, res: Response) => {
   // STUB: replace in Stage 5
+  const slotId = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? 'slot_stub_001');
   const data: ReleaseSlotResponseData = {
     released: true,
-    slotId: req.params.id || 'slot_stub_001',
+    slotId,
   };
   sendSuccess(res, data, 200);
 });
@@ -181,9 +183,10 @@ adminRouter.put(
   validate({ body: UpdateUserRoleRequestSchema }),
   (req: Request, res: Response) => {
     // STUB: replace in Stage 5
+    const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockUser.id);
     const data: UserView = {
       ...mockUser,
-      id: req.params.id || mockUser.id,
+      id,
       role: req.body.role,
       assignedLotId: req.body.assignedLotId ?? null,
     };
@@ -222,9 +225,10 @@ adminRouter.post(
 // STUB: replace in Stage 5
 adminRouter.delete('/devices/:id', (req: Request, res: Response) => {
   // STUB: replace in Stage 5
+  const deviceId = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockDevice.id);
   const data: DeleteDeviceResponseData = {
     revoked: true,
-    deviceId: req.params.id || mockDevice.id,
+    deviceId,
   };
   sendSuccess(res, data, 200);
 });

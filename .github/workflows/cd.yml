@@ -1,0 +1,98 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-staging:
+    name: Deploy Staging
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build applications
+        run: npm run build
+
+      - name: Run database migrations (Staging)
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          if [ -d "backend/prisma" ]; then
+            npx -w backend prisma migrate deploy
+          else
+            echo "backend/prisma does not exist yet; skipping database migration."
+          fi
+
+      - name: Deploy to Staging Provider
+        run: |
+          echo "=================================================================="
+          echo "STAGING DEPLOYMENT STEP: BLOCKED pending cloud hosting provider."
+          echo "To activate: Provide cloud host (e.g. AWS/Render/Railway) and"
+          echo "configure secrets STAGING_DATABASE_URL and STAGING_DEPLOY_TOKEN."
+          echo "=================================================================="
+
+  deploy-production:
+    name: Deploy Production
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build applications
+        run: npm run build
+
+      - name: Run database migrations (Production)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if [ -d "backend/prisma" ]; then
+            npx -w backend prisma migrate deploy
+          else
+            echo "backend/prisma does not exist yet; skipping database migration."
+          fi
+
+      - name: Deploy to Production Provider
+        run: |
+          echo "=================================================================="
+          echo "PRODUCTION DEPLOYMENT STEP: BLOCKED pending cloud hosting provider."
+          echo "Requires approval gate in GitHub Environment 'production'."
+          echo "Documented Rollback Procedure:"
+          echo "1. Identify previous stable tag (e.g. v1.0.0)."
+          echo "2. Re-trigger workflow with previous stable tag."
+          echo "3. If schema changes need rollback, execute down migration via:"
+          echo "   npx prisma migrate resolve --rolled-back <migration_name>"
+          echo "=================================================================="
