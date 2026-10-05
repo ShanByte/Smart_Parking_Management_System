@@ -2,13 +2,25 @@ import http from 'http';
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { logger } from './lib/logger.js';
+import { initSocket, closeSocket } from './sockets/index.js';
 
 const app = createApp();
 const server = http.createServer(app);
 
+// Attach Socket.IO to HTTP server per contract C9 & Amendment F4
+const io = initSocket(server);
+
 // Graceful shutdown handling
-function gracefulShutdown(signal: string) {
+async function gracefulShutdown(signal: string) {
   logger.info({ signal }, 'Received termination signal, shutting down gracefully');
+
+  try {
+    await closeSocket();
+    logger.info('Socket.IO connections closed cleanly');
+  } catch (err) {
+    logger.error({ err }, 'Error closing Socket.IO connections during shutdown');
+  }
+
   server.close(() => {
     logger.info('HTTP server closed cleanly');
     process.exit(0);
@@ -31,4 +43,4 @@ server.listen(env.PORT, '127.0.0.1', () => {
   );
 });
 
-export { server };
+export { server, io };
