@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { Role } from '@smart-parking/shared';
-import { UnauthorizedError } from '../lib/errors.js';
+import { Role, ErrorCode } from '@smart-parking/shared';
+import { UnauthorizedError, ForbiddenError } from '../lib/errors.js';
 import { verifyAccessTokenJwt } from '../lib/crypto.js';
+import { prisma } from '../lib/prisma.js';
 
 // Extend Express Request to include authenticated user identity
 declare global {
@@ -30,7 +31,7 @@ export function verifyAccessToken(token: string): { userId: string; role: Role }
       role: payload.role,
     };
   } catch {
-    throw new UnauthorizedError(undefined, 'Invalid or expired access token');
+    throw new UnauthorizedError(ErrorCode.UNAUTHORIZED, 'Invalid or expired access token');
   }
 }
 
@@ -40,7 +41,7 @@ export function verifyAccessToken(token: string): { userId: string; role: Role }
 export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new UnauthorizedError(undefined, 'Missing or malformed Authorization header');
+    throw new UnauthorizedError(ErrorCode.UNAUTHORIZED, 'Missing or malformed Authorization header');
   }
 
   const token = authHeader.slice(7).trim();
@@ -52,4 +53,53 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
   };
 
   next();
+}
+
+/**
+ * Require specific role, re-checking the database on every call (Security Rules 5 & 14)
+ */
+export function requireRole(...allowedRoles: Role[]) {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedError(ErrorCode.UNAUTHORIZED, 'Authentication required');
+      }
+
+      // Re-check role and assignedLotId directly in the database (Rules 5 & 14)
+      const dbUser = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: { id: true, role: true, assignedLotId: true },
+      });
+
+      if (!dbUser) {
+        throw new UnauthorizedError(ErrorCode.UNAUTHORIZED, 'User account no longer exists');
+      }
+
+      const currentRole = dbUser.role as unknown as Role;
+      req.user.role = currentRole;
+      req.user.assignedLotId = dbUser.assignedLotId;
+
+      if (!allowedRoles.includes(currentRole)) {
+        throw new ForbiddenError(
+          ErrorCode.FORBIDDEN,
+          `Access denied. Role ${currentRole} is not permitted.`
+        );
+      }
+
+      // Guard check: GUARD role is restricted to their assigned lot (Rule 14)
+      if (currentRole === Role.GUARD) {
+        const lotIdParam = req.params.lotId;
+        if (lotIdParam && dbUser.assignedLotId !== lotIdParam) {
+          throw new ForbiddenError(
+            ErrorCode.FORBIDDEN,
+            'Guard is not authorized for this parking lot'
+          );
+        }
+      }
+
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
 }

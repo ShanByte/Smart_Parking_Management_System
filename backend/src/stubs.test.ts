@@ -1,6 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from './app.js';
+import { prisma } from './lib/prisma.js';
+import type { User, RefreshToken } from '@prisma/client';
+import { hashPassword, signAccessToken, generateRefreshToken, hashToken } from './lib/crypto.js';
+import { Role } from '@smart-parking/shared';
 import {
   RegisterResponseDataSchema,
   LoginResponseDataSchema,
@@ -33,6 +37,16 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
 
   describe('Auth Endpoints', () => {
     it('POST /api/v1/auth/register matches RegisterResponseDataSchema', async () => {
+      vi.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
+      vi.spyOn(prisma.user, 'create').mockResolvedValue({
+        id: 'usr_001',
+        email: 'jane@example.com',
+        name: 'Jane Doe',
+        role: 'USER',
+        assignedLotId: null,
+        createdAt: new Date('2026-10-05T00:00:00.000Z'),
+      } as unknown as User);
+
       const res = await request(app)
         .post('/api/v1/auth/register')
         .send({
@@ -47,6 +61,18 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('POST /api/v1/auth/login matches LoginResponseDataSchema', async () => {
+      const passwordHash = await hashPassword('password123');
+      vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+        id: 'usr_001',
+        email: 'demo@example.com',
+        name: 'Demo User',
+        role: 'USER',
+        passwordHash,
+        assignedLotId: null,
+        createdAt: new Date('2026-10-05T00:00:00.000Z'),
+      } as unknown as User);
+      vi.spyOn(prisma.refreshToken, 'create').mockResolvedValue({} as unknown as RefreshToken);
+
       const res = await request(app)
         .post('/api/v1/auth/login')
         .send({ email: 'demo@example.com', password: 'password123' });
@@ -57,7 +83,30 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('POST /api/v1/auth/refresh matches RefreshResponseDataSchema', async () => {
-      const res = await request(app).post('/api/v1/auth/refresh');
+      const rawToken = generateRefreshToken();
+      vi.spyOn(prisma.refreshToken, 'findFirst').mockResolvedValue({
+        id: 'tok_001',
+        tokenHash: hashToken(rawToken),
+        userId: 'usr_001',
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+        user: {
+          id: 'usr_001',
+          name: 'Demo User',
+          email: 'demo@example.com',
+          role: 'USER',
+          assignedLotId: null,
+          createdAt: new Date('2026-10-05T00:00:00.000Z'),
+        },
+      } as unknown as (RefreshToken & { user: User }));
+      vi.spyOn(prisma.refreshToken, 'update').mockResolvedValue({} as unknown as RefreshToken);
+      vi.spyOn(prisma.refreshToken, 'create').mockResolvedValue({} as unknown as RefreshToken);
+
+      const res = await request(app)
+        .post('/api/v1/auth/refresh')
+        .set('X-Requested-With', 'XMLHttpRequest')
+        .set('Cookie', [`refresh_token=${rawToken}`]);
+
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       const parsed = RefreshResponseDataSchema.safeParse(res.body.data);
@@ -65,7 +114,14 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('POST /api/v1/auth/logout matches LogoutResponseDataSchema', async () => {
-      const res = await request(app).post('/api/v1/auth/logout');
+      const rawToken = generateRefreshToken();
+      vi.spyOn(prisma.refreshToken, 'updateMany').mockResolvedValue({ count: 1 });
+
+      const res = await request(app)
+        .post('/api/v1/auth/logout')
+        .set('X-Requested-With', 'XMLHttpRequest')
+        .set('Cookie', [`refresh_token=${rawToken}`]);
+
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       const parsed = LogoutResponseDataSchema.safeParse(res.body.data);
@@ -73,7 +129,20 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('GET /api/v1/auth/me matches MeResponseDataSchema', async () => {
-      const res = await request(app).get('/api/v1/auth/me');
+      const token = signAccessToken({ sub: 'usr_001', role: Role.USER });
+      vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+        id: 'usr_001',
+        email: 'demo@example.com',
+        name: 'Demo User',
+        role: 'USER',
+        assignedLotId: null,
+        createdAt: new Date('2026-10-05T00:00:00.000Z'),
+      } as unknown as User);
+
+      const res = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       const parsed = MeResponseDataSchema.safeParse(res.body.data);

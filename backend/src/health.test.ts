@@ -18,10 +18,8 @@ describe('Health and Readiness Endpoints', () => {
   it('GET /ready returns 503 NOT_READY while database/redis are uninitialized', async () => {
     const res = await request(app).get('/ready');
     expect(res.status).toBe(503);
-    expect(res.body).toEqual({
-      success: false,
-      message: 'Database and Redis dependencies not connected yet',
-      code: ErrorCode.NOT_READY,
-    });
+    expect(res.body.success).toBe(false);
+    expect(res.body.code).toBe(ErrorCode.NOT_READY);
+    expect(res.body.message).toContain('Readiness check failed');
   });
 });
