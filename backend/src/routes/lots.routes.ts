@@ -1,80 +1,49 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { validate } from '../middleware/validate.js';
 import { sendSuccess } from '../lib/respond.js';
-import {
-  GetSlotsQuerySchema,
-  SlotStatus,
-  LotWithCount,
-  SlotView,
-  GetLotsResponseData,
-  GetLotResponseData,
-  GetSlotsResponseData,
-  GetStatsResponseData,
-} from '@smart-parking/shared';
+import { GetSlotsQuerySchema } from '@smart-parking/shared';
+import { getLotsWithFreeCount, getLot, getSlotsByLot } from '../services/lots.service.js';
+import { statsRouter } from './stats.routes.js';
 
 export const lotsRouter = Router();
 
-const mockLot: LotWithCount = {
-  id: 'lot_stub_001',
-  name: 'FC Road Smart Parking',
-  address: 'Fergusson College Rd, Shivajinagar, Pune',
-  latitude: 18.5204,
-  longitude: 73.8567,
-  totalSlots: 50,
-  freeCount: 25,
-  pricePerHourPaise: 4000,
-};
-
-const mockSlots: SlotView[] = [
-  { id: 'slot_stub_001', slotNumber: 'A1', status: SlotStatus.AVAILABLE },
-  { id: 'slot_stub_002', slotNumber: 'A2', status: SlotStatus.OCCUPIED },
-  { id: 'slot_stub_003', slotNumber: 'A3', status: SlotStatus.RESERVED },
-];
+// Mount statsRouter from Member 4 for GET /api/v1/parking-lots/:id/stats per C9
+lotsRouter.use('/', statsRouter);
 
 // GET /api/v1/parking-lots
-// STUB: replace in Stage 3
-lotsRouter.get('/', (_req: Request, res: Response) => {
-  // STUB: replace in Stage 3
-  const data: GetLotsResponseData = [mockLot];
-  sendSuccess(res, data, 200);
+lotsRouter.get('/', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const data = await getLotsWithFreeCount();
+    sendSuccess(res, data, 200);
+  } catch (err) {
+    next(err);
+  }
 });
 
 // GET /api/v1/parking-lots/:id
-// STUB: replace in Stage 3
-lotsRouter.get('/:id', (req: Request, res: Response) => {
-  // STUB: replace in Stage 3
-  const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockLot.id);
-  const data: GetLotResponseData = {
-    ...mockLot,
-    id,
-  };
-  sendSuccess(res, data, 200);
+lotsRouter.get('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? '');
+    const data = await getLot(id);
+    sendSuccess(res, data, 200);
+  } catch (err) {
+    next(err);
+  }
 });
 
 // GET /api/v1/parking-lots/:id/slots?from=&to=
-// STUB: replace in Stage 3
 lotsRouter.get(
   '/:id/slots',
   validate({ query: GetSlotsQuerySchema }),
-  (_req: Request, res: Response) => {
-    // STUB: replace in Stage 3
-    const data: GetSlotsResponseData = mockSlots;
-    sendSuccess(res, data, 200);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? '');
+      const from = typeof req.query.from === 'string' ? new Date(req.query.from) : undefined;
+      const to = typeof req.query.to === 'string' ? new Date(req.query.to) : undefined;
+      const data = await getSlotsByLot(id, from, to);
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
   }
 );
-
-// GET /api/v1/parking-lots/:id/stats
-// STUB: replace in Stage 3 (Member 4 provides backend/src/routes/stats.routes.ts)
-lotsRouter.get('/:id/stats', (req: Request, res: Response) => {
-  // STUB: replace in Stage 3 when Member 4 delivers stats.routes.ts
-  const parkingLotId = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockLot.id);
-  const data: GetStatsResponseData = {
-    parkingLotId,
-    totalSlots: 50,
-    hours: [
-      { hourOfDay: 9, averageOccupiedPercent: 45.5, samples: 10 },
-      { hourOfDay: 10, averageOccupiedPercent: 78.0, samples: 12 },
-    ],
-  };
-  sendSuccess(res, data, 200);
-});

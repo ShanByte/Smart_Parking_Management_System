@@ -2,9 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from './app.js';
 import { prisma } from './lib/prisma.js';
-import type { User, RefreshToken } from '@prisma/client';
+import type { User, RefreshToken, ParkingLot, Booking } from '@prisma/client';
 import { hashPassword, signAccessToken, generateRefreshToken, hashToken } from './lib/crypto.js';
-import { Role } from '@smart-parking/shared';
+import { Role, SlotStatus } from '@smart-parking/shared';
+import * as lotsService from './services/lots.service.js';
+import * as reservationsService from './services/reservations.service.js';
+import * as statsService from './services/stats.service.js';
 import {
   RegisterResponseDataSchema,
   LoginResponseDataSchema,
@@ -152,6 +155,19 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
 
   describe('Parking Lots Endpoints', () => {
     it('GET /api/v1/parking-lots matches GetLotsResponseDataSchema', async () => {
+      vi.spyOn(lotsService, 'getLotsWithFreeCount').mockResolvedValue([
+        {
+          id: 'lot_001',
+          name: 'Pune Station Parking',
+          address: 'Station Rd, Pune',
+          latitude: 18.5284,
+          longitude: 73.8743,
+          totalSlots: 100,
+          freeCount: 50,
+          pricePerHourPaise: 5000,
+        },
+      ]);
+
       const res = await request(app).get('/api/v1/parking-lots');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -160,6 +176,17 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('GET /api/v1/parking-lots/:id matches GetLotResponseDataSchema', async () => {
+      vi.spyOn(lotsService, 'getLot').mockResolvedValue({
+        id: 'lot_001',
+        name: 'Pune Station Parking',
+        address: 'Station Rd, Pune',
+        latitude: 18.5284,
+        longitude: 73.8743,
+        totalSlots: 100,
+        freeCount: 50,
+        pricePerHourPaise: 5000,
+      });
+
       const res = await request(app).get('/api/v1/parking-lots/lot_001');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -168,6 +195,10 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('GET /api/v1/parking-lots/:id/slots matches GetSlotsResponseDataSchema', async () => {
+      vi.spyOn(lotsService, 'getSlotsByLot').mockResolvedValue([
+        { id: 'slot_001', slotNumber: 'A1', status: SlotStatus.AVAILABLE },
+      ]);
+
       const res = await request(app).get('/api/v1/parking-lots/lot_001/slots');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -176,6 +207,20 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('GET /api/v1/parking-lots/:id/stats matches GetStatsResponseDataSchema', async () => {
+      vi.spyOn(prisma.parkingLot, 'findUnique').mockResolvedValue({
+        id: 'lot_001',
+        name: 'Pune Station Parking',
+        address: 'Station Rd, Pune',
+        latitude: 18.5284,
+        longitude: 73.8743,
+        totalSlots: 100,
+        pricePerHourPaise: 5000,
+        isActive: true,
+      } as unknown as ParkingLot);
+      vi.spyOn(statsService, 'getHourlyStats').mockResolvedValue([
+        { hourOfDay: 10, averageOccupiedPercent: 40.0, samples: 5 },
+      ]);
+
       const res = await request(app).get('/api/v1/parking-lots/lot_001/stats');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -185,9 +230,28 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
   });
 
   describe('Bookings Endpoints', () => {
+    const bookingToken = signAccessToken({ sub: 'usr_001', role: Role.USER });
+
     it('POST /api/v1/bookings matches CreateBookingResponseDataSchema', async () => {
+      vi.spyOn(reservationsService, 'holdSlot').mockResolvedValue({
+        id: 'bk_001',
+        userId: 'usr_001',
+        slotId: 'slot_001',
+        status: 'HELD',
+        startTime: new Date('2026-10-05T12:00:00.000Z'),
+        endTime: new Date('2026-10-05T13:00:00.000Z'),
+        amountPaise: 5000,
+        heldUntil: new Date('2026-10-05T12:05:00.000Z'),
+        bookingCode: 'ABC234',
+        vehicleNumber: 'MH12AB1234',
+        idempotencyKey: 'idem-12345678',
+        checkedInAt: null,
+        createdAt: new Date('2026-10-05T11:59:00.000Z'),
+      } as unknown as Booking);
+
       const res = await request(app)
         .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${bookingToken}`)
         .set('idempotency-key', 'idem-12345678')
         .send({
           slotId: 'slot_001',
@@ -202,7 +266,27 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('GET /api/v1/bookings/my matches GetMyBookingsResponseDataSchema', async () => {
-      const res = await request(app).get('/api/v1/bookings/my');
+      vi.spyOn(prisma.booking, 'findMany').mockResolvedValue([
+        {
+          id: 'bk_001',
+          userId: 'usr_001',
+          slotId: 'slot_001',
+          status: 'HELD',
+          startTime: new Date('2026-10-05T12:00:00.000Z'),
+          endTime: new Date('2026-10-05T13:00:00.000Z'),
+          amountPaise: 5000,
+          heldUntil: new Date('2026-10-05T12:05:00.000Z'),
+          bookingCode: 'ABC234',
+          vehicleNumber: 'MH12AB1234',
+          idempotencyKey: 'idem-12345678',
+          checkedInAt: null,
+          createdAt: new Date('2026-10-05T11:59:00.000Z'),
+        } as unknown as Booking,
+      ]);
+
+      const res = await request(app)
+        .get('/api/v1/bookings/my')
+        .set('Authorization', `Bearer ${bookingToken}`);
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       const parsed = GetMyBookingsResponseDataSchema.safeParse(res.body.data);
@@ -210,7 +294,25 @@ describe('C7 Endpoint Stubs Contract Parity', () => {
     });
 
     it('DELETE /api/v1/bookings/:id matches CancelBookingResponseDataSchema', async () => {
-      const res = await request(app).delete('/api/v1/bookings/bk_001');
+      vi.spyOn(reservationsService, 'cancelBooking').mockResolvedValue({
+        id: 'bk_001',
+        userId: 'usr_001',
+        slotId: 'slot_001',
+        status: 'CANCELLED',
+        startTime: new Date('2026-10-05T12:00:00.000Z'),
+        endTime: new Date('2026-10-05T13:00:00.000Z'),
+        amountPaise: 5000,
+        heldUntil: new Date('2026-10-05T12:05:00.000Z'),
+        bookingCode: 'ABC234',
+        vehicleNumber: 'MH12AB1234',
+        idempotencyKey: 'idem-12345678',
+        checkedInAt: null,
+        createdAt: new Date('2026-10-05T11:59:00.000Z'),
+      } as unknown as Booking);
+
+      const res = await request(app)
+        .delete('/api/v1/bookings/bk_001')
+        .set('Authorization', `Bearer ${bookingToken}`);
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       const parsed = CancelBookingResponseDataSchema.safeParse(res.body.data);

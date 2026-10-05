@@ -1,69 +1,98 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { validate } from '../middleware/validate.js';
 import { sendSuccess } from '../lib/respond.js';
+import { requireAuth } from '../middleware/auth.js';
 import {
   CreateBookingRequestSchema,
   CreateBookingHeadersSchema,
   BookingStatus,
   BookingView,
-  CreateBookingResponseData,
   GetMyBookingsResponseData,
-  CancelBookingResponseData,
 } from '@smart-parking/shared';
+import { holdSlot, cancelBooking } from '../services/reservations.service.js';
+import { prisma } from '../lib/prisma.js';
+import type { Booking } from '@prisma/client';
 
 export const bookingsRouter = Router();
 
-const mockBooking: BookingView = {
-  id: 'bk_stub_001',
-  slotId: 'slot_stub_001',
-  status: BookingStatus.HELD,
-  startTime: '2026-10-05T12:00:00.000Z',
-  endTime: '2026-10-05T13:00:00.000Z',
-  amountPaise: 4000,
-  heldUntil: '2026-10-05T12:05:00.000Z',
-  bookingCode: 'ABC234',
-  vehicleNumber: 'MH12AB1234',
-  checkedInAt: null,
-};
+function formatBookingView(booking: Booking): BookingView {
+  return {
+    id: booking.id,
+    slotId: booking.slotId,
+    status: booking.status as BookingStatus,
+    startTime: booking.startTime.toISOString(),
+    endTime: booking.endTime.toISOString(),
+    amountPaise: booking.amountPaise,
+    heldUntil: booking.heldUntil ? booking.heldUntil.toISOString() : null,
+    bookingCode: booking.bookingCode,
+    vehicleNumber: booking.vehicleNumber,
+    checkedInAt: booking.checkedInAt ? booking.checkedInAt.toISOString() : null,
+  };
+}
 
 // POST /api/v1/bookings
-// STUB: replace in Stage 3
 bookingsRouter.post(
   '/',
+  requireAuth,
   validate({
     headers: CreateBookingHeadersSchema,
     body: CreateBookingRequestSchema,
   }),
-  (req: Request, res: Response) => {
-    // STUB: replace in Stage 3
-    const data: CreateBookingResponseData = {
-      ...mockBooking,
-      slotId: req.body.slotId,
-      startTime: req.body.startTime,
-      endTime: req.body.endTime,
-      vehicleNumber: req.body.vehicleNumber ?? null,
-    };
-    sendSuccess(res, data, 201);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { slotId, startTime, endTime, vehicleNumber } = req.body;
+      const idempotencyKey = (req.headers['idempotency-key'] as string) || '';
+      const userId = req.user!.userId;
+
+      const booking = await holdSlot(
+        userId,
+        slotId,
+        new Date(startTime),
+        new Date(endTime),
+        idempotencyKey,
+        vehicleNumber
+      );
+
+      sendSuccess(res, formatBookingView(booking), 201);
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 // GET /api/v1/bookings/my
-// STUB: replace in Stage 3
-bookingsRouter.get('/my', (_req: Request, res: Response) => {
-  // STUB: replace in Stage 3
-  const data: GetMyBookingsResponseData = [mockBooking];
-  sendSuccess(res, data, 200);
-});
+bookingsRouter.get(
+  '/my',
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user!.userId;
+      const bookings = await prisma.booking.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const data: GetMyBookingsResponseData = bookings.map(formatBookingView);
+      sendSuccess(res, data, 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // DELETE /api/v1/bookings/:id
-// STUB: replace in Stage 3
-bookingsRouter.delete('/:id', (req: Request, res: Response) => {
-  // STUB: replace in Stage 3
-  const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? mockBooking.id);
-  const data: CancelBookingResponseData = {
-    ...mockBooking,
-    id,
-    status: BookingStatus.CANCELLED,
-  };
-  sendSuccess(res, data, 200);
-});
+bookingsRouter.delete(
+  '/:id',
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0]! : (req.params.id ?? '');
+      const userId = req.user!.userId;
+
+      const booking = await cancelBooking(userId, id);
+      sendSuccess(res, formatBookingView(booking), 200);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
