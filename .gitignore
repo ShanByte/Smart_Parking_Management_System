@@ -1,0 +1,39 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Production build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Testing and coverage
+coverage/
+playwright-report/
+test-results/
+k6-results/
+*.k6.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Keys and certificates
+*.pem
+*.key
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo

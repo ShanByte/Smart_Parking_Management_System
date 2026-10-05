@@ -1,0 +1,37 @@
+# Git and VCS
+.git
+.gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Test and coverage outputs
+coverage/
+playwright-report/
+test-results/
+k6-results/
+*.k6.json
+
+# Logs
+*.log
+
+# Sensitive keys and certificates
+*.pem
+*.key
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

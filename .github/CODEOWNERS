@@ -1,0 +1,60 @@
+# CODEOWNERS
+# Syntax: <path> <owners>
+# Note: Team members must add their GitHub handles here once confirmed.
+# Member 1: API, Auth, Admin, Devices, Shared Contracts
+# Member 2: Database, Booking Engine, Realtime, Workers
+# Member 3: User Web Application
+# Member 4: Platform, DevOps, QA, Simulator, Analytics
+
+# Default ownership fallback
+*
+
+# Member 1: Shared types/contracts, backend core, auth, admin, guard features
+/shared/
+/backend/src/app.ts
+/backend/src/server.ts
+/backend/src/config/
+/backend/src/routes/
+/backend/src/controllers/
+/backend/src/middleware/
+/backend/src/lib/errors.ts
+/backend/src/services/auth*
+/backend/src/services/payments*
+/backend/src/services/audit*
+/backend/src/services/admin*
+/backend/src/services/devices*
+/frontend/src/features/guard/
+/frontend/src/features/admin/
+
+# Member 2: Database schema/migrations, sockets, workers, reservations
+/backend/prisma/
+/backend/src/sockets/
+/backend/src/workers/
+/backend/src/lib/prisma.ts
+/backend/src/lib/redis.ts
+/backend/src/test/
+/backend/src/services/reservations*
+/backend/src/services/lots*
+/backend/src/services/ingestion*
+
+# Member 3: User Web Application
+/frontend/
+
+# Member 4: Platform, DevOps, CI/CD, Simulator, Analytics, QA, Documentation
+/.github/
+/infra/
+/simulator/
+/qa/
+/backend/src/services/stats*
+/backend/src/routes/stats.routes.ts
+/frontend/src/features/stats/
+/docker-compose.yml
+/.env.example
+/.dockerignore
+/.gitignore
+/.nvmrc
+/.editorconfig
+/eslint.config.js
+/.prettierrc
+/tsconfig.base.json
+/README.md
