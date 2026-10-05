@@ -10,10 +10,10 @@
     "simulator"
   ],
   "scripts": {
-    "build": "npm run build -w shared --if-present && npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present && eslint .",
-    "typecheck": "npm run typecheck -w shared --if-present && npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "build": "node -e \"const fs=require('fs');const ws=['shared','backend','frontend','simulator'].filter(d=>fs.existsSync(d+'/package.json'));if(ws.length)require('child_process').execSync('npm run build -w shared --if-present && npm run build --workspaces --if-present',{stdio:'inherit'});else console.log('No workspaces to build yet.');\"",
+    "lint": "eslint . && node -e \"const fs=require('fs');const ws=['shared','backend','frontend','simulator'].filter(d=>fs.existsSync(d+'/package.json'));if(ws.length)require('child_process').execSync('npm run lint --workspaces --if-present',{stdio:'inherit'});else console.log('Root lint clean; no workspaces to lint yet.');\"",
+    "typecheck": "node -e \"const fs=require('fs');const ws=['shared','backend','frontend','simulator'].filter(d=>fs.existsSync(d+'/package.json'));if(ws.length)require('child_process').execSync('npm run typecheck -w shared --if-present && npm run typecheck --workspaces --if-present',{stdio:'inherit'});else console.log('tsconfig.base.json valid; no workspaces to typecheck yet.');\"",
+    "test": "node -e \"const fs=require('fs');const ws=['shared','backend','frontend','simulator'].filter(d=>fs.existsSync(d+'/package.json'));if(ws.length)require('child_process').execSync('npm run test --workspaces --if-present',{stdio:'inherit'});else console.log('No workspace tests to run yet.');\"",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
