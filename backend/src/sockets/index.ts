@@ -104,7 +104,11 @@ export function initSocket(
         origin: string | undefined,
         callback: (err: Error | null, allow?: boolean) => void
       ) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (
+          !origin ||
+          allowedOrigins.includes(origin) ||
+          (env.NODE_ENV === 'development' && /^http:\/\/(localhost|127\.0\.0\.1):(517\d|4173)$/.test(origin))
+        ) {
           callback(null, true);
         } else {
           callback(new Error('Origin not permitted by CORS policy'));
