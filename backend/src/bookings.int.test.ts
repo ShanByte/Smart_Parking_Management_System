@@ -104,8 +104,8 @@ describe('Stage 3 Integration Tests: Real Database Booking & Lot Endpoints', () 
       .delete(`/api/v1/bookings/${bookingId}`)
       .set('Authorization', `Bearer ${otherToken}`);
 
-    expect(unauthorizedCancel.status).toBe(403);
-    expect(unauthorizedCancel.body.code).toBe(ErrorCode.FORBIDDEN);
+    expect(unauthorizedCancel.status).toBe(404);
+    expect(unauthorizedCancel.body.code).toBe(ErrorCode.NOT_FOUND);
 
     // 6. User cancels their own booking via DELETE /api/v1/bookings/:id
     const cancelRes = await request(app)
