@@ -178,11 +178,11 @@ Example:
 DEMO_PAY_ENABLED=true
 NO_SHOW_GRACE_MINUTES=1
 
-SEED_ADMIN_EMAIL=admin@smartparking.local
-SEED_ADMIN_PASSWORD=<your_local_password>
+SEED_ADMIN_EMAIL=admin@example.com
+SEED_ADMIN_PASSWORD=Password@123
 
-SEED_GUARD_EMAIL=guard1@smartparking.local
-SEED_GUARD_PASSWORD=<your_local_password>
+SEED_GUARD_EMAIL=guard@example.com
+SEED_GUARD_PASSWORD=Password@123
 
 SIM_TARGET_URL=http://localhost:4000
 SIM_ALLOWED_TARGETS=http://localhost:4000
