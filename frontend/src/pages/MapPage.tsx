@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { ParkingLot } from '../types/contract';
+import { formatArrivalLabel } from '../utils/lotUtils';
 import { ParkingMap } from '../components/map/ParkingMap';
 import { LotPanel } from '../components/lot/LotPanel';
 import {
@@ -36,15 +38,51 @@ export const MapPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [mobileTab, setMobileTab] = useState<'map' | 'list'>('map');
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialFromParam = searchParams.get('from');
+
   // Selected Arrival state
   const [arrivalIso, setArrivalIso] = useState<string>(() => {
+    if (initialFromParam) {
+      const parsed = new Date(initialFromParam);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString();
+      }
+    }
     const d = new Date();
     d.setSeconds(0, 0);
     return d.toISOString();
   });
-  const [isArrivalNow, setIsArrivalNow] = useState<boolean>(true);
-  const [arrivalLabel, setArrivalLabel] = useState<string>('Now');
+  const [isArrivalNow, setIsArrivalNow] = useState<boolean>(() => {
+    if (initialFromParam) {
+      const parsed = new Date(initialFromParam);
+      if (!isNaN(parsed.getTime())) {
+        return Math.abs(parsed.getTime() - Date.now()) < 120_000;
+      }
+    }
+    return true;
+  });
+  const [arrivalLabel, setArrivalLabel] = useState<string>(() => {
+    if (initialFromParam) {
+      const parsed = new Date(initialFromParam);
+      if (!isNaN(parsed.getTime())) {
+        return formatArrivalLabel(parsed);
+      }
+    }
+    return 'Now';
+  });
   const [userCoords, setUserCoords] = useState<UserCoordinates | null>(null);
+
+  useEffect(() => {
+    if (initialFromParam) {
+      const parsed = new Date(initialFromParam);
+      if (!isNaN(parsed.getTime()) && parsed.toISOString() !== arrivalIso) {
+        setArrivalIso(parsed.toISOString());
+        setIsArrivalNow(Math.abs(parsed.getTime() - Date.now()) < 120_000);
+        setArrivalLabel(formatArrivalLabel(parsed));
+      }
+    }
+  }, [initialFromParam, arrivalIso]);
 
   // Subscribe to real-time lot updates to update map pins and counts (C9)
   useLotSocket();
@@ -260,6 +298,14 @@ export const MapPage: React.FC = () => {
           setArrivalIso(iso);
           setIsArrivalNow(isNow);
           setArrivalLabel(label);
+          setSearchParams(
+            (prev) => {
+              const updated = new URLSearchParams(prev);
+              updated.set('from', iso);
+              return updated;
+            },
+            { replace: true }
+          );
         }}
         userCoords={userCoords}
         onLocationChange={(coords) => setUserCoords(coords)}

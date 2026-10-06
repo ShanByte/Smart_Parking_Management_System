@@ -41,7 +41,7 @@ export const AppLayout: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>Smart Parking Management System &copy; 2026 CodeCrafters</span>
           <span className="text-slate-400">
-            Craftverse Hackathon Demo Edition &bull; Pune
+            Craftverse Hackathon Edition &bull; Pune
           </span>
         </div>
       </footer>

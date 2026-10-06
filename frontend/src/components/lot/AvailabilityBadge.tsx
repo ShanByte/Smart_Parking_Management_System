@@ -182,7 +182,7 @@ export const AvailabilityBadge: React.FC<AvailabilityBadgeProps> = ({
       {/* Mandatory Footnote */}
       {showFootnote && (
         <p className="text-[10px] text-slate-500 italic px-1">
-          Estimate based on demo occupancy history. Not a guarantee.
+          Estimate based on historical occupancy data. Not a guarantee.
         </p>
       )}
     </div>

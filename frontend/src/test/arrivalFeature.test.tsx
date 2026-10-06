@@ -27,7 +27,7 @@ describe('Stage E2: Arrival Availability Feature Test Suite', () => {
       expect(screen.getByText(/Excellent chance of finding a space/i)).toBeInTheDocument();
       expect(screen.getByText(ArrivalBand.EXCELLENT)).toBeInTheDocument();
       expect(
-        screen.getByText(/Estimate based on demo occupancy history. Not a guarantee./i)
+        screen.getByText(/Estimate based on historical occupancy data. Not a guarantee./i)
       ).toBeInTheDocument();
       expect(
         screen.getByLabelText(/Estimated availability at 7:00 PM: 95 percent, excellent availability likelihood/i)

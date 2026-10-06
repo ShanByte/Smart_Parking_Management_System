@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { ParkingLot } from '../../types/contract';
 import { getMarkerColor } from '../../utils/mapUtils';
+import { formatLotName } from '../../utils/lotUtils';
 
 export interface ParkingMapProps {
   lots: ParkingLot[];
@@ -145,11 +146,13 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
         ? 'ring-4 ring-indigo-500 scale-110 shadow-lg'
         : 'hover:scale-105 shadow-md';
 
+      const displayName = formatLotName(lot.name);
+
       // Custom accessible HTML marker with icon and label text
       const iconHtml = `
         <div 
           class="relative flex flex-col items-center cursor-pointer select-none -translate-x-1/2 -translate-y-full"
-          aria-label="${lot.name} - ${lot.freeCount} of ${lot.totalSlots} slots available (${label})${isRecommended ? ' - Recommended choice' : ''}"
+          aria-label="${displayName} - ${lot.freeCount} of ${lot.totalSlots} slots available (${label})${isRecommended ? ' - Recommended choice' : ''}"
         >
           <div 
             class="relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white font-bold text-xs border-2 border-white ${categoryBgClass} ${ringClass} transition-transform"
@@ -164,7 +167,7 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
           </div>
           <div class="w-2.5 h-2.5 rotate-45 -mt-1.5 shadow-xs ${categoryBgClass}"></div>
           <span class="mt-1 px-2 py-0.5 rounded bg-white/95 text-[10px] font-semibold text-slate-800 shadow-xs border border-slate-200 whitespace-nowrap">
-            ${isRecommended ? '★ ' : ''}${lot.name}
+            ${isRecommended ? '★ ' : ''}${displayName}
           </span>
         </div>
       `;
@@ -179,7 +182,7 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
       try {
         const marker = L.marker([lot.latitude, lot.longitude], {
           icon: customIcon,
-          title: `${lot.name}: ${lot.freeCount} slots free`,
+          title: `${displayName}: ${lot.freeCount} slots free`,
         }).addTo(map);
 
         marker.on('click', () => {
@@ -195,7 +198,7 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
                 ? '<div class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full inline-block">★ Recommended for Arrival</div>'
                 : ''
             }
-            <h4 class="font-bold text-sm text-slate-900">${lot.name}</h4>
+            <h4 class="font-bold text-sm text-slate-900">${displayName}</h4>
             <p class="text-xs text-slate-500">${lot.address}</p>
             <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
               <span class="font-bold ${categoryTextClass}">${lot.freeCount} / ${lot.totalSlots} Slots Free</span>
@@ -251,7 +254,7 @@ export const ParkingMap: React.FC<ParkingMapProps> = ({
             return (
               <li key={lot.id}>
                 <button onClick={() => onSelectLot(lot)}>
-                  {lot.name}: {lot.freeCount} of {lot.totalSlots} spots free ({label}), ₹
+                  {formatLotName(lot.name)}: {lot.freeCount} of {lot.totalSlots} spots free ({label}), ₹
                   {(lot.pricePerHourPaise / 100).toFixed(0)} per hour.
                 </button>
               </li>

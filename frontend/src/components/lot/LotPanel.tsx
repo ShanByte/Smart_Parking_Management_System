@@ -15,6 +15,7 @@ import {
 } from '../common/icons';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { AvailabilityHourPatternItem, indiaTimeParts } from '@smart-parking/shared';
+import { formatLotName } from '../../utils/lotUtils';
 
 // Lazy-load pattern chart to isolate Recharts into its own chunk
 const AvailabilityPatternChart = lazy(
@@ -136,7 +137,7 @@ export const LotPanel: React.FC<LotPanelProps> = ({
                 })()}
               </div>
               <CardTitle className="text-lg font-bold text-slate-900 mt-1.5">
-                {selectedLot.name}
+                {formatLotName(selectedLot.name)}
               </CardTitle>
               <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                 <MapPinIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
@@ -238,7 +239,7 @@ export const LotPanel: React.FC<LotPanelProps> = ({
               <AvailabilityPatternChart
                 pattern={patternByLotId[selectedLot.id] || []}
                 arrivalHour={arrivalParts.hourOfDay}
-                lotName={selectedLot.name}
+                lotName={formatLotName(selectedLot.name)}
                 isLimitedData={scoresByLotId[selectedLot.id] === null}
               />
             </Suspense>
@@ -258,7 +259,7 @@ export const LotPanel: React.FC<LotPanelProps> = ({
                 rel="noopener noreferrer"
                 className="p-2.5 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors flex items-center justify-center min-w-[40px] min-h-[40px] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
                 title="Open Google Maps Directions"
-                aria-label={`Directions to ${selectedLot.name}`}
+                aria-label={`Directions to ${formatLotName(selectedLot.name)}`}
               >
                 <NavigationIcon className="w-4 h-4" />
               </a>
@@ -310,7 +311,7 @@ export const LotPanel: React.FC<LotPanelProps> = ({
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h5 className="font-semibold text-sm text-slate-900 tracking-tight">
-                    {lot.name}
+                    {formatLotName(lot.name)}
                   </h5>
                   <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 line-clamp-1">
                     <MapPinIcon className="w-3 h-3 text-slate-400 flex-shrink-0" />

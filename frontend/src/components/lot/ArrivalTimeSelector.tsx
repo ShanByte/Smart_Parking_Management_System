@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../common/Card';
+import { formatToDateTimeLocal, formatArrivalLabel } from '../../utils/lotUtils';
 
 export interface UserCoordinates {
   latitude: number;
@@ -14,6 +15,18 @@ export interface ArrivalTimeSelectorProps {
   className?: string;
 }
 
+function getPresetFromIso(arrivalIso: string): 'now' | '15' | '30' | '60' | 'custom' {
+  if (!arrivalIso) return 'now';
+  const d = new Date(arrivalIso);
+  if (isNaN(d.getTime())) return 'now';
+  const diffMinutes = Math.round((d.getTime() - Date.now()) / 60000);
+  if (diffMinutes >= -1 && diffMinutes <= 2) return 'now';
+  if (diffMinutes >= 13 && diffMinutes <= 17) return '15';
+  if (diffMinutes >= 28 && diffMinutes <= 32) return '30';
+  if (diffMinutes >= 58 && diffMinutes <= 62) return '60';
+  return 'custom';
+}
+
 export const ArrivalTimeSelector: React.FC<ArrivalTimeSelectorProps> = ({
   arrivalIso,
   onChange,
@@ -21,11 +34,26 @@ export const ArrivalTimeSelector: React.FC<ArrivalTimeSelectorProps> = ({
   onLocationChange,
   className = '',
 }) => {
-  const [activePreset, setActivePreset] = useState<'now' | '15' | '30' | '60' | 'custom'>('now');
-  const [customDateTime, setCustomDateTime] = useState('');
+  const [activePreset, setActivePreset] = useState<'now' | '15' | '30' | '60' | 'custom'>(() => {
+    return getPresetFromIso(arrivalIso);
+  });
+  const [customDateTime, setCustomDateTime] = useState<string>(() => {
+    const d = new Date(arrivalIso);
+    return isNaN(d.getTime()) ? '' : formatToDateTimeLocal(d);
+  });
   const [customError, setCustomError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationDenied, setLocationDenied] = useState(false);
+
+  useEffect(() => {
+    if (!arrivalIso) return;
+    const computedPreset = getPresetFromIso(arrivalIso);
+    setActivePreset(computedPreset);
+    const d = new Date(arrivalIso);
+    if (!isNaN(d.getTime())) {
+      setCustomDateTime(formatToDateTimeLocal(d));
+    }
+  }, [arrivalIso]);
 
   // Helper to format arrival instant for display
   const formatTimeLabel = (date: Date): string => {
@@ -81,7 +109,7 @@ export const ArrivalTimeSelector: React.FC<ArrivalTimeSelectorProps> = ({
 
     setCustomError(null);
     parsed.setSeconds(0, 0);
-    const label = `${parsed.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${formatTimeLabel(parsed)}`;
+    const label = formatArrivalLabel(parsed);
     onChange(parsed.toISOString(), false, label);
   };
 
@@ -132,7 +160,7 @@ export const ArrivalTimeSelector: React.FC<ArrivalTimeSelectorProps> = ({
 
   const arrivalDate = new Date(arrivalIso);
   const displayLabel =
-    activePreset === 'now' ? 'Now' : formatTimeLabel(arrivalDate);
+    activePreset === 'now' ? 'Now' : formatArrivalLabel(arrivalDate);
 
   return (
     <Card className={`p-4 bg-white border border-slate-200 shadow-xs ${className}`}>
@@ -229,11 +257,15 @@ export const ArrivalTimeSelector: React.FC<ArrivalTimeSelectorProps> = ({
             type="button"
             onClick={() => {
               setActivePreset('custom');
-              // Pre-fill input with current ISO slice
-              const localNow = new Date(Date.now() + 120 * 60 * 1000);
-              const formattedLocal = localNow.toISOString().slice(0, 16);
+              const d = new Date(arrivalIso);
+              const localNow =
+                !isNaN(d.getTime()) && d.getTime() > Date.now() - 60 * 1000
+                  ? d
+                  : new Date(Date.now() + 120 * 60 * 1000);
+              localNow.setSeconds(0, 0);
+              const formattedLocal = formatToDateTimeLocal(localNow);
               setCustomDateTime(formattedLocal);
-              const label = `${localNow.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${formatTimeLabel(localNow)}`;
+              const label = formatArrivalLabel(localNow);
               onChange(localNow.toISOString(), false, label);
             }}
             className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
@@ -260,6 +292,8 @@ export const ArrivalTimeSelector: React.FC<ArrivalTimeSelectorProps> = ({
               type="datetime-local"
               value={customDateTime}
               onChange={handleCustomChange}
+              min={formatToDateTimeLocal(new Date(Date.now() - 60000))}
+              max={formatToDateTimeLocal(new Date(Date.now() + 7 * 24 * 3600 * 1000))}
               aria-describedby={customError ? 'custom-arrival-error' : undefined}
               className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
             />

@@ -12,6 +12,7 @@ import { BusyChart } from '../features/stats/BusyChart';
 import { AvailabilityBadge } from '../components/lot/AvailabilityBadge';
 import { useArrivalAvailability } from '../hooks/useArrivalAvailability';
 import { blendArrivalAvailability, indiaTimeParts } from '@smart-parking/shared';
+import { formatLotName, formatArrivalLabel } from '../utils/lotUtils';
 import { useAuthStore } from '../stores/authStore';
 import { useBookingStore } from '../stores/bookingStore';
 import { validateVehicleNumber } from '../schemas/bookingSchemas';
@@ -44,7 +45,7 @@ export const LotDetails: React.FC = () => {
   // Subscribe to real-time slot and lot updates via WebSocket (C9)
   useLotSocket(id);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialFrom = searchParams.get('from');
 
   // Time window state for C7 GET /parking-lots/:id/slots?from=&to=
@@ -70,7 +71,8 @@ export const LotDetails: React.FC = () => {
     setTimeWindow(tw);
     // Clear slot selection if window changes
     setSelectedSlotLocal(null);
-  }, []);
+    setSearchParams({ from: tw.from }, { replace: true });
+  }, [setSearchParams]);
 
   // 1. Fetch Lot Details with React Query
   const {
@@ -230,7 +232,7 @@ export const LotDetails: React.FC = () => {
       <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
         <p className="text-slate-700 font-semibold text-lg">Parking lot not found or unavailable.</p>
         <p className="text-slate-500 text-sm mt-1">Please return to the map to choose an active parking facility.</p>
-        <Button variant="primary" className="mt-5" onClick={() => navigate('/')}>
+        <Button variant="primary" className="mt-5" onClick={() => navigate(`/?from=${encodeURIComponent(timeWindow.from)}`)}>
           Return to Map
         </Button>
       </div>
@@ -245,7 +247,7 @@ export const LotDetails: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(`/?from=${encodeURIComponent(timeWindow.from)}`)}
             className="p-2 min-h-[40px] min-w-[40px]"
             aria-label="Back to map"
           >
@@ -253,7 +255,7 @@ export const LotDetails: React.FC = () => {
           </Button>
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              {lot.name}
+              {formatLotName(lot.name)}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
               <MapPinIcon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
@@ -317,14 +319,13 @@ export const LotDetails: React.FC = () => {
       {/* Estimated Arrival Availability Badge */}
       <AvailabilityBadge
         score={arrivalScore}
-        arrivalTimeLabel={new Date(timeWindow.from).toLocaleTimeString([], {
-          hour: 'numeric',
-          minute: '2-digit',
-        })}
+        arrivalTimeLabel={formatArrivalLabel(new Date(timeWindow.from))}
       />
 
       {/* Time Window Selector */}
       <TimeWindowSelector
+        value={timeWindow}
+        initialFrom={initialFrom || undefined}
         pricePerHourPaise={lot.pricePerHourPaise}
         onChange={handleTimeWindowChange}
       />
@@ -394,7 +395,7 @@ export const LotDetails: React.FC = () => {
             <AvailabilityPatternChart
               pattern={arrivalPattern}
               arrivalHour={indiaTimeParts(new Date(timeWindow.from)).hourOfDay}
-              lotName={lot.name}
+              lotName={formatLotName(lot.name)}
               isLimitedData={arrivalScore === null}
             />
           </Suspense>

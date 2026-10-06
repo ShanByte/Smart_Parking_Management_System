@@ -290,7 +290,7 @@ export const Login: React.FC = () => {
               {/* Quick Demo Logins for Team Evaluation */}
               <div className="pt-5 border-t border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 text-center uppercase tracking-wider mb-3">
-                  Quick Role-Based Demo Logins:
+                  Quick Role-Based Logins:
                 </p>
                 <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
                   <Button
