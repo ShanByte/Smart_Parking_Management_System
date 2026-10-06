@@ -170,3 +170,62 @@ Server-side Payment Verification
  │
  ▼
 Booking Confirmed
+```
+
+---
+
+## 🚀 Run the Demo (Local Windows / PowerShell Walkthrough)
+
+### 1. Environment Setup
+Copy `.env.example` to `.env` and provide local values (all bounded to `127.0.0.1`):
+```bash
+cp .env.example .env
+```
+Key demo settings in `.env`:
+- `DEMO_PAY_ENABLED=true`
+- `NO_SHOW_GRACE_MINUTES=1`
+- `SEED_ADMIN_EMAIL=admin@smartparking.local`
+- `SEED_ADMIN_PASSWORD=<your_local_admin_password>`
+- `SEED_GUARD_EMAIL=guard1@smartparking.local`
+- `SEED_GUARD_PASSWORD=<your_local_guard_password>`
+- `SIM_TARGET_URL=http://localhost:4000`
+- `SIM_ALLOWED_TARGETS=http://localhost:4000`
+
+### 2. Infrastructure & Database Bootstrap
+Start Postgres & Redis Docker containers, deploy Prisma migrations, and seed demo lots:
+```bash
+npm run demo:up
+```
+
+### 3. IoT Simulator Device Provisioning
+Generate an active simulation device key in the database:
+```bash
+npm run device:create
+```
+Copy the printed `SIM_DEVICE_KEY` output into `.env`.
+
+### 4. Start Application Stack (In Separate Terminals)
+- **API Server & Socket Hub:**
+  ```bash
+  npm run demo:api
+  ```
+- **Virtual Sensor Simulator (IoT Telemetry):**
+  ```bash
+  npm run demo:simulator
+  ```
+- **Frontend Client (Port 5173):**
+  ```bash
+  npm run dev --workspace=@smart-parking/frontend
+  ```
+
+### 5. Verification & Live Demo Steps
+- Open `http://localhost:5173` to see Pune parking lots with live availability pins.
+- Register user A and select a slot (e.g. `A5`); slot becomes `HELD` with a 5-minute timer.
+- In private browsing, sign in user B; attempting to hold `A5` shows `HTTP 409: Slot just taken`.
+- Pay via Demo Pay; slot updates to `RESERVED` and displays a booking QR code.
+- Log in to `/guard` as `guard1@smartparking.local` to verify check-in and check-out.
+- Stop the stack anytime via:
+  ```bash
+  npm run demo:down
+  ```
+
