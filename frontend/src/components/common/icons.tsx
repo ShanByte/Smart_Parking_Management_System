@@ -2,9 +2,11 @@ import React from 'react';
 
 export type IconProps = React.SVGProps<SVGSVGElement>;
 
-export const CarIcon: React.FC<IconProps> = ({ className = 'w-5 h-5', ...props }) => (
+export const CarIcon: React.FC<IconProps> = ({ className = 'w-5 h-5', width = 24, height = 24, ...props }) => (
   <svg
     viewBox="0 0 24 24"
+    width={width}
+    height={height}
     fill="none"
     stroke="currentColor"
     strokeWidth="2"
