@@ -15,7 +15,7 @@ function getRedisUrl(): string {
 export function createRedisClient(options: RedisOptions = {}): Redis {
   const url = getRedisUrl();
   const client = new Redis(url, {
-    maxRetriesPerRequest: 3,
+    maxRetriesPerRequest: null,
     lazyConnect: true,
     ...options,
   });

@@ -81,9 +81,19 @@ export const Login: React.FC = () => {
         navigate(getRoleHomePath(user.role));
       }
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Login failed. Invalid email or password.';
+      const axiosErr = err as {
+        response?: { data?: { message?: string } };
+        code?: string;
+        message?: string;
+      };
+      let message = axiosErr?.response?.data?.message;
+      if (!message) {
+        if (!axiosErr?.response) {
+          message = 'Cannot connect to API server on port 4000. Please start the backend with: npm run demo:api';
+        } else {
+          message = 'Login failed. Invalid email or password.';
+        }
+      }
       setGeneralError(message);
     } finally {
       setLoading(false);
