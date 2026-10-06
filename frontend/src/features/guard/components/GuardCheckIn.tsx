@@ -14,9 +14,6 @@ interface GuardCheckInProps {
   onCheckInSuccess: () => void;
 }
 
-// C3 Crockford base32 alphabet: 0-9, A-Z excluding I, L, O, U
-const CROCKFORD_CHARS = /^[0-9A-HJKMNP-TV-Z]*$/;
-
 export const GuardCheckIn: React.FC<GuardCheckInProps> = ({ onCheckInSuccess }) => {
   const [bookingCode, setBookingCode] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -28,13 +25,22 @@ export const GuardCheckIn: React.FC<GuardCheckInProps> = ({ onCheckInSuccess }) 
     checkedInAt: string;
   } | null>(null);
 
+  const cleanCodeInput = (text: string) => {
+    return text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Auto-uppercase and sanitize input
-    const val = e.target.value.toUpperCase().trim();
-    if (val.length <= 6 && CROCKFORD_CHARS.test(val)) {
-      setBookingCode(val);
-      if (errorMessage) setErrorMessage(null);
-    }
+    const cleaned = cleanCodeInput(e.target.value);
+    setBookingCode(cleaned);
+    if (errorMessage) setErrorMessage(null);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    const cleaned = cleanCodeInput(pastedText);
+    setBookingCode(cleaned);
+    if (errorMessage) setErrorMessage(null);
   };
 
   const handleCheckIn = async (e: React.FormEvent) => {
@@ -126,9 +132,10 @@ export const GuardCheckIn: React.FC<GuardCheckInProps> = ({ onCheckInSuccess }) 
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck="false"
-                maxLength={6}
+                maxLength={12}
                 value={bookingCode}
                 onChange={handleInputChange}
+                onPaste={handlePaste}
                 placeholder="e.g. KP4M9X"
                 aria-label="Booking Code"
                 className="flex-1 min-h-[48px] h-12 px-4 text-lg font-mono tracking-widest text-center sm:text-left font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-600 focus:bg-white transition-colors"

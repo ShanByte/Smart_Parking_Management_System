@@ -52,7 +52,7 @@ export const LotDetails: React.FC = () => {
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(() => {
     if (initialFrom) {
       const parsed = new Date(initialFrom);
-      if (!isNaN(parsed.getTime())) {
+      if (!isNaN(parsed.getTime()) && parsed.getTime() >= Date.now() - 30 * 1000) {
         return {
           from: parsed.toISOString(),
           to: new Date(parsed.getTime() + 3600 * 1000).toISOString(),
@@ -129,12 +129,30 @@ export const LotDetails: React.FC = () => {
       if (!selectedSlotLocal) throw new Error('Please select a slot');
       setErrorMessage(null);
 
+      // Ensure startTime has not drifted into the past while browsing the page
+      const startDate = new Date(timeWindow.from);
+      const endDate = new Date(timeWindow.to);
+      const now = Date.now();
+
+      let effectiveStart = timeWindow.from;
+      let effectiveEnd = timeWindow.to;
+
+      if (isNaN(startDate.getTime()) || startDate.getTime() < now) {
+        const durationMs = !isNaN(endDate.getTime()) && !isNaN(startDate.getTime())
+          ? Math.max(15 * 60 * 1000, endDate.getTime() - startDate.getTime())
+          : 60 * 60 * 1000;
+        const freshStart = new Date();
+        const freshEnd = new Date(freshStart.getTime() + durationMs);
+        effectiveStart = freshStart.toISOString();
+        effectiveEnd = freshEnd.toISOString();
+      }
+
       const res = await api.post<{ success: boolean; data: Booking }>(
         '/bookings',
         {
           slotId: selectedSlotLocal.id,
-          startTime: timeWindow.from,
-          endTime: timeWindow.to,
+          startTime: effectiveStart,
+          endTime: effectiveEnd,
           vehicleNumber: vehicleNumber.trim() ? vehicleNumber.toUpperCase() : undefined,
         },
         {

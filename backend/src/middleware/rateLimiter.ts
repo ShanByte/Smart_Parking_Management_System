@@ -4,10 +4,26 @@ import { env } from '../config/env.js';
 
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30, // 30 attempts per 15 minutes
+  max: env.NODE_ENV === 'development' ? 500 : 30, // Generous limit in dev to allow demo switching
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => env.NODE_ENV === 'test', // Bypass in test environments
+  skip: (req) => {
+    if (env.NODE_ENV === 'test') return true;
+    if (env.NODE_ENV === 'development') {
+      const email = typeof req.body?.email === 'string' ? req.body.email.toLowerCase().trim() : '';
+      if (
+        email.endsWith('@example.com') ||
+        email === 'driver@example.com' ||
+        email === 'guard@example.com' ||
+        email === 'admin@example.com' ||
+        req.path === '/refresh' ||
+        req.originalUrl?.includes('/refresh')
+      ) {
+        return true;
+      }
+    }
+    return false;
+  },
   message: {
     success: false,
     message: 'Too many authentication attempts. Please try again later.',
