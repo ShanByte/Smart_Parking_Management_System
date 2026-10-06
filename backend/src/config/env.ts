@@ -1,3 +1,5 @@
+import path from 'path';
+import fs from 'fs';
 import { z } from 'zod';
 
 const envSchema = z
@@ -50,6 +52,25 @@ const envSchema = z
 export type EnvConfig = z.infer<typeof envSchema>;
 
 function loadEnv(): EnvConfig {
+  if (process.env.NODE_ENV !== 'production' && typeof process.loadEnvFile === 'function') {
+    const candidates = [
+      path.resolve(__dirname, '../../../.env'),
+      path.resolve(__dirname, '../../.env'),
+      path.resolve(process.cwd(), '.env'),
+      path.resolve(process.cwd(), '../.env'),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        try {
+          process.loadEnvFile(p);
+          break;
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
+
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
     // Security Rule 2: list only variable NAMES that are missing or invalid, NEVER their values
