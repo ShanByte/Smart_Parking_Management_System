@@ -214,10 +214,11 @@ export const BookingConfirmation: React.FC = () => {
         rzp.open();
       }
     } catch (err: unknown) {
+      const serverMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (err as Error)?.message ||
-        'Could not initiate Razorpay checkout.';
+        serverMsg === 'Internal server error'
+          ? 'Live Razorpay gateway is unconfigured in local development. Please click "Demo Pay" to complete payment.'
+          : serverMsg || (err as Error)?.message || 'Could not initiate Razorpay checkout. Please use Demo Pay.';
       setPaymentError(msg);
     } finally {
       setIsRazorpayLoading(false);
@@ -369,22 +370,37 @@ export const BookingConfirmation: React.FC = () => {
             <div className="hidden sm:block absolute -right-3 top-1/2 -mt-3 w-6 h-6 rounded-full bg-white border-l-2 border-indigo-200" aria-hidden="true" />
 
             <div className="flex items-center justify-center gap-2 mb-1.5">
-              <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-widest bg-indigo-100 px-2.5 py-0.5 rounded-full">
-                Guard Verification Code
+              <span
+                className={`text-[11px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full ${
+                  isConfirmed
+                    ? 'text-indigo-700 bg-indigo-100'
+                    : 'text-amber-800 bg-amber-100 border border-amber-200'
+                }`}
+              >
+                {isConfirmed ? 'Guard Verification Code' : 'Pre-assigned Code (Payment Pending)'}
               </span>
             </div>
 
             <div
               data-testid="booking-code"
-              className="text-4xl sm:text-5xl font-black font-mono tracking-widest text-indigo-900 my-2 select-all drop-shadow-sm"
+              className={`text-4xl sm:text-5xl font-black font-mono tracking-widest my-2 select-all drop-shadow-sm ${
+                isConfirmed ? 'text-indigo-900' : 'text-slate-500'
+              }`}
             >
               {booking?.bookingCode || '------'}
             </div>
 
-            <p className="text-sm font-semibold text-indigo-700 mt-2 flex items-center justify-center gap-1.5">
-              <ShieldCheckIcon className="w-4 h-4 text-indigo-600" />
-              Show this code to the guard
-            </p>
+            {isConfirmed ? (
+              <p className="text-sm font-semibold text-indigo-700 mt-2 flex items-center justify-center gap-1.5">
+                <ShieldCheckIcon className="w-4 h-4 text-emerald-600" />
+                Show this code to the guard
+              </p>
+            ) : (
+              <p className="text-xs sm:text-sm font-medium text-amber-800 mt-2 flex items-center justify-center gap-1.5">
+                <ClockIcon className="w-4 h-4 text-amber-600" />
+                Inactive — Complete payment below to activate this code for entry
+              </p>
+            )}
 
             {booking?.bookingCode && (
               <div className="mt-3">
