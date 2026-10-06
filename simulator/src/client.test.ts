@@ -98,4 +98,15 @@ describe('Simulator HTTP Client - Request Shape & Authentication', () => {
     expect(lots[0]?.id).toBe('lot-1');
     expect(lots[0]?.name).toBe('Pune Station Lot');
   });
+
+  it('normalizes target URL when baseUrl includes trailing slashes or /api/v1 subpaths', async () => {
+    const client = new SimulatorApiClient(
+      `http://127.0.0.1:${port}/api/v1/sensors/events`,
+      'key',
+    );
+    const lots = await client.getParkingLots();
+
+    expect(lots).toHaveLength(1);
+    expect(lots[0]?.id).toBe('lot-1');
+  });
 });

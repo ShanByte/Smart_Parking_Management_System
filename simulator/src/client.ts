@@ -21,7 +21,8 @@ export class SimulatorApiClient {
   private readonly timeoutMs: number;
 
   constructor(baseUrl: string, deviceKey: string, timeoutMs = 5000) {
-    this.baseUrl = baseUrl.replace(/\/+$/, '');
+    // Sanitize baseUrl: strip trailing slashes and any /api/v1 subpath to keep strictly base origin
+    this.baseUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/v1.*$/i, '');
     this.deviceKey = deviceKey;
     this.timeoutMs = timeoutMs;
   }

@@ -5,8 +5,24 @@
 import { loadConfig } from './config.js';
 import { SimulatorWorker } from './worker.js';
 
+// Load environment variables from local or parent (.env) file if not already present
+function initEnv(): void {
+  if (typeof process.loadEnvFile === 'function') {
+    try {
+      process.loadEnvFile();
+    } catch {
+      try {
+        process.loadEnvFile('../.env');
+      } catch {
+        // Environment may already be supplied via process environment or container
+      }
+    }
+  }
+}
+
 function main(): void {
   try {
+    initEnv();
     const config = loadConfig(process.env);
     const worker = new SimulatorWorker(config);
 
