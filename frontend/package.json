@@ -26,7 +26,7 @@
     "tailwind-merge": "^2.5.4",
     "socket.io-client": "^4.8.1",
     "zod": "^3.23.8",
-    "zustand": "^5.0.0"
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
